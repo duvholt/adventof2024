@@ -6,7 +6,6 @@ pub fn part2(_contents: String) -> String {
     "example2".to_string()
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::fs;
