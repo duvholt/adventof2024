@@ -1,41 +1,38 @@
-pub fn part1(contents: String) -> String {
+fn parse_input(contents: String) -> (Vec<u64>, Vec<u64>) {
     let lines: Vec<_> = contents
         .lines()
         .map(|s| {
             let mut a = s.split_whitespace();
-            (a.next().unwrap(), a.next().unwrap())
+            let first = a.next().unwrap().parse::<u64>().unwrap();
+            let second = a.next().unwrap().parse::<u64>().unwrap();
+            (first, second)
         })
         .collect();
-    let mut first: Vec<u64> = lines.iter().map(|s| s.0.parse::<u64>().unwrap()).collect();
+    let mut first: Vec<u64> = lines.iter().map(|(l, _)| *l).collect();
     first.sort();
-    let mut second: Vec<u64> = lines.iter().map(|s| s.1.parse::<u64>().unwrap()).collect();
+    let mut second: Vec<u64> = lines.into_iter().map(|(_, l)| l).collect();
     second.sort();
+    (first, second)
+}
 
-    let mut s = 0;
-    for (i, f) in first.into_iter().enumerate() {
-        s += f.abs_diff(second[i])
-    }
+pub fn part1(contents: String) -> String {
+    let (first, second) = parse_input(contents);
 
+    let s: u64 = first
+        .into_iter()
+        .zip(second)
+        .map(|(f, s)| f.abs_diff(s))
+        .sum();
     s.to_string()
 }
+
 pub fn part2(contents: String) -> String {
-    let lines: Vec<_> = contents
-        .lines()
-        .map(|s| {
-            let mut a = s.split_whitespace();
-            (a.next().unwrap(), a.next().unwrap())
-        })
-        .collect();
-    let mut first: Vec<u64> = lines.iter().map(|s| s.0.parse::<u64>().unwrap()).collect();
-    first.sort();
-    let mut second: Vec<u64> = lines.iter().map(|s| s.1.parse::<u64>().unwrap()).collect();
-    second.sort();
+    let (first, second) = parse_input(contents);
 
-    let mut s = 0;
-    for (i, f) in first.into_iter().enumerate() {
-        s += second.iter().filter(|c| **c == f).sum::<u64>();
-    }
-
+    let s: u64 = first
+        .into_iter()
+        .map(|f| second.iter().filter(|&&c| c == f).sum::<u64>())
+        .sum();
     s.to_string()
 }
 
