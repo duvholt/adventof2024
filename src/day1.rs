@@ -1,14 +1,14 @@
-use rustc_hash::FxHashMap;
-use std::collections::hash_map::Entry;
+use rustc_hash::FxBuildHasher;
+use std::collections::{hash_map::Entry, HashMap};
 
 fn parse_input(contents: String) -> (Vec<u64>, Vec<u64>) {
-    let lines = contents.lines();
-    let mut first = Vec::new();
-    let mut second = Vec::new();
-    for s in lines {
-        let mut a = s.split_ascii_whitespace();
-        let f: u64 = a.next().unwrap().parse().unwrap();
-        let s: u64 = a.next().unwrap().parse().unwrap();
+    let lines: Vec<&str> = contents.split_ascii_whitespace().collect();
+    let mut first = Vec::with_capacity(lines.len());
+    let mut second = Vec::with_capacity(lines.len());
+
+    for chunk in lines.chunks(2) {
+        let f: u64 = chunk[0].parse().unwrap();
+        let s: u64 = chunk[1].parse().unwrap();
         first.push(f);
         second.push(s);
     }
@@ -31,7 +31,7 @@ pub fn part1(contents: String) -> String {
 pub fn part2(contents: String) -> String {
     let (first, second) = parse_input(contents);
 
-    let mut second_map = FxHashMap::default();
+    let mut second_map = HashMap::with_capacity_and_hasher(second.len(), FxBuildHasher);
     for s in second {
         match second_map.entry(s) {
             Entry::Occupied(occupied_entry) => *(occupied_entry.into_mut()) += 1,
