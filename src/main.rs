@@ -22,5 +22,5 @@ fn main() {
     let map = day_tasks();
 
     let result = map.get(args.task.as_str()).expect("Unknown task")(contents);
-    println!("Result: \n{}", result);
+    println!("Result for {}: \n{}", args.task, result);
 }
