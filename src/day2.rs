@@ -3,13 +3,6 @@
 //     The levels are either all increasing or all decreasing.
 //     Any two adjacent levels differ by at least one and at most three.
 
-#[derive(PartialEq, Eq)]
-enum Dir {
-    None,
-    Up,
-    Down,
-}
-
 pub fn part1(contents: String) -> String {
     let reports = contents.lines();
     let mut sum = 0;
@@ -18,7 +11,7 @@ pub fn part1(contents: String) -> String {
             .split_ascii_whitespace()
             .map(|l| l.parse::<i64>().unwrap())
             .collect();
-        let safe = safe_report(None, &levels);
+        let safe = safe_report(&levels);
         if safe {
             sum += 1;
         }
@@ -35,12 +28,12 @@ pub fn part2(contents: String) -> String {
             .split_ascii_whitespace()
             .map(|l| l.parse::<i64>().unwrap())
             .collect();
-        let safe = safe_report(None, &levels);
+        let safe = safe_report(&levels);
         if safe {
             sum += 1;
         } else {
             for skip_i in 0..levels.len() {
-                let safe = safe_report(Some(skip_i), &levels);
+                let safe = safe_report_with_skip(skip_i, &levels);
                 if safe {
                     sum += 1;
                     break;
@@ -52,34 +45,33 @@ pub fn part2(contents: String) -> String {
     sum.to_string()
 }
 
-fn safe_report(skip_i: Option<usize>, levels: &[i64]) -> bool {
-    let mut prev_option: Option<(Dir, i64)> = None;
-    let mut safe = true;
-    for (i, &level) in levels.iter().enumerate() {
-        if let Some(skip_i) = skip_i {
-            if skip_i == i {
-                continue;
-            }
-        }
-        if let Some((dir, prev)) = prev_option {
-            let diff = level - prev;
-            if diff.abs() > 3 || diff.abs() < 1 {
-                safe = false;
-                break;
-            }
-            if diff > 0 && (dir == Dir::Up || dir == Dir::None) {
-                prev_option = Some((Dir::Up, level));
-            } else if diff < 0 && (dir == Dir::Down || dir == Dir::None) {
-                prev_option = Some((Dir::Down, level));
-            } else {
-                safe = false;
-                break;
-            }
+fn cond(delta: i64) -> bool {
+    let abs = delta.abs();
+    abs > 0 && abs <= 3
+}
+
+fn safe_report(levels: &[i64]) -> bool {
+    levels.windows(3).all(|w| {
+        let prev = w[0];
+        let current = w[1];
+        let next = w[2];
+        let delta_prev = current - prev;
+        let delta_next = next - current;
+        if !cond(delta_prev) || !cond(delta_next) {
+            false
         } else {
-            prev_option = Some((Dir::None, level));
+            delta_prev.signum() == delta_next.signum()
         }
-    }
-    safe
+    })
+}
+
+fn safe_report_with_skip(skip_i: usize, levels: &[i64]) -> bool {
+    let l = levels
+        .iter()
+        .enumerate()
+        .filter_map(|(i, e)| if i != skip_i { Some(*e) } else { None })
+        .collect::<Vec<_>>();
+    safe_report(&l)
 }
 
 #[cfg(test)]
