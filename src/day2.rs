@@ -11,7 +11,7 @@ pub fn part1(contents: String) -> String {
             .split_ascii_whitespace()
             .map(|l| l.parse::<i64>().unwrap())
             .collect();
-        let safe = safe_report(&levels);
+        let safe = safe_report(&levels, None);
         if safe {
             sum += 1;
         }
@@ -28,12 +28,12 @@ pub fn part2(contents: String) -> String {
             .split_ascii_whitespace()
             .map(|l| l.parse::<i64>().unwrap())
             .collect();
-        let safe = safe_report(&levels);
+        let safe = safe_report(&levels, None);
         if safe {
             sum += 1;
         } else {
             for skip_i in 0..levels.len() {
-                let safe = safe_report_with_skip(skip_i, &levels);
+                let safe = safe_report(&levels, Some(skip_i));
                 if safe {
                     sum += 1;
                     break;
@@ -50,28 +50,31 @@ fn cond(delta: i64) -> bool {
     abs > 0 && abs <= 3
 }
 
-fn safe_report(levels: &[i64]) -> bool {
-    levels.windows(3).all(|w| {
-        let prev = w[0];
-        let current = w[1];
-        let next = w[2];
-        let delta_prev = current - prev;
-        let delta_next = next - current;
-        if !cond(delta_prev) || !cond(delta_next) {
-            false
-        } else {
-            delta_prev.signum() == delta_next.signum()
+fn safe_report(levels: &[i64], skip_i: Option<usize>) -> bool {
+    let mut i = 0;
+    let sign = (levels.last().unwrap() - levels.first().unwrap()).signum();
+    while i + 1 < (levels.len()) {
+        if skip_i == Some(i) {
+            i += 1;
+            continue;
         }
-    })
-}
-
-fn safe_report_with_skip(skip_i: usize, levels: &[i64]) -> bool {
-    let l = levels
-        .iter()
-        .enumerate()
-        .filter_map(|(i, e)| if i != skip_i { Some(*e) } else { None })
-        .collect::<Vec<_>>();
-    safe_report(&l)
+        let prev = levels[i];
+        let next = if skip_i == Some(i + 1) {
+            if i + 2 >= levels.len() {
+                i += 1;
+                continue;
+            }
+            levels[i + 2]
+        } else {
+            levels[i + 1]
+        };
+        let delta = next - prev;
+        if delta.signum() != sign || !cond(delta) {
+            return false;
+        }
+        i += 1;
+    }
+    true
 }
 
 #[cfg(test)]
