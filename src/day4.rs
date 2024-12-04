@@ -5,15 +5,15 @@ pub fn part1(contents: String) -> String {
     let lines: Vec<_> = contents.lines().collect();
     let max_x = lines[0].len();
     let max_y = lines.len();
-    println!("{} {}", max_x, max_y);
+    // println!("{} {}", max_x, max_y);
     // horizontal
     for line in lines.iter() {
-        println!("Line: {}", line);
+        // println!("Line: {}", line);
         let v = find_xmas(line, word);
         sum += v.len();
         let v_rev: Vec<_> = find_xmas(line, rev_word);
         sum += v_rev.len();
-        println!("Line matches {:?} / {:?}", v, v_rev);
+        // println!("Line matches {:?} / {:?}", v, v_rev);
     }
     // vertical
     for x in 0..max_x {
@@ -21,33 +21,63 @@ pub fn part1(contents: String) -> String {
             .map(|y1| lines[y1].as_bytes()[x] as char)
             .collect();
         let (v, v_rev) = xmas_sum(&column, word, rev_word, &mut sum);
-        println!("Line matches {:?} => {:?} / {:?}", column, v, v_rev);
+        // println!("Line matches {:?} => {:?} / {:?}", column, v, v_rev);
     }
 
     // diagonal down left / up right
+    // todo: missing: y
     for start_x in 0..max_x {
-        let column: String = (0..max_x - start_x)
+        let end = max_x - start_x;
+        let column: String = (0..end)
             .map(|x1| {
                 let x = start_x + x1;
                 let y = x1;
                 lines[y].as_bytes()[x] as char
             })
             .collect();
-        let (v, v_rev) = xmas_sum(&column, word, rev_word, &mut sum);
-        println!("Line matches {:?} => {:?} / {:?}", column, v, v_rev);
+
+        xmas_sum(&column, word, rev_word, &mut sum);
+        // println!("Diagonal x 1 {:?}", column);
+    }
+    for start_y in 0..max_y {
+        let end = max_y - start_y;
+        let column: String = (1..end)
+            .map(|x1| {
+                let x = x1 - 1;
+                let y = start_y + x1;
+                lines[y].as_bytes()[x] as char
+            })
+            .collect();
+        xmas_sum(&column, word, rev_word, &mut sum);
+        // println!("Diagonal y 1 {:?}", column);
     }
 
     // diagonal down right / up
     for start_x in 0..max_x {
-        let column: String = (0..max_x - start_x)
+        let end = max_x - start_x;
+        let column: String = (0..end)
             .map(|x1| {
-                let x = (max_x - 1) - x1 - start_x;
+                let x = (max_x - 1) - start_x - x1;
                 let y = x1;
                 lines[y].as_bytes()[x] as char
             })
             .collect();
-        let (v, v_rev) = xmas_sum(&column, word, rev_word, &mut sum);
+
+        xmas_sum(&column, word, rev_word, &mut sum);
         // println!("Line matches {:?} => {:?} / {:?}", column, v, v_rev);
+        // println!("Diagonal x 2 {:?}", column);
+    }
+    for start_y in 0..max_y {
+        let end = max_y - start_y;
+        let column: String = (1..end)
+            .map(|x1| {
+                let x = (max_x - 1) - x1 + 1;
+                let y = start_y + x1;
+                lines[y].as_bytes()[x] as char
+            })
+            .collect();
+        xmas_sum(&column, word, rev_word, &mut sum);
+        // println!("Diagonal y 2 {:?}", column);
     }
 
     // down left, down left
@@ -86,7 +116,7 @@ mod tests {
     fn test_part1() {
         assert_eq!(
             part1(fs::read_to_string("./input/4/real.txt").unwrap()),
-            "example"
+            "2530"
         );
     }
 
