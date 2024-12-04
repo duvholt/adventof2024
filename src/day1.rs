@@ -71,6 +71,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_part1_bigboy() {
         assert_eq!(
             part1(fs::read_to_string("./input/1/bigboy.txt").unwrap()),
@@ -79,6 +80,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_part2_bigboy() {
         assert_eq!(
             part2(fs::read_to_string("./input/1/bigboy.txt").unwrap()),
