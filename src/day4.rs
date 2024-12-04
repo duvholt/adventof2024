@@ -7,10 +7,8 @@ pub fn part1(contents: String) -> String {
     let max_y = lines.len();
     // horizontal
     for line in lines.iter() {
-        let v = find_xmas(line, word);
-        sum += v.len();
-        let v_rev: Vec<_> = find_xmas(line, rev_word);
-        sum += v_rev.len();
+        sum += find_xmas(line, word);
+        sum += find_xmas(line, rev_word);
     }
     // vertical
     for x in 0..max_x {
@@ -73,21 +71,13 @@ pub fn part1(contents: String) -> String {
     sum.to_string()
 }
 
-fn xmas_sum<'a>(
-    column: &'a str,
-    word: &str,
-    rev_word: &str,
-    sum: &mut usize,
-) -> (Vec<(usize, &'a str)>, Vec<(usize, &'a str)>) {
-    let v = find_xmas(column, word);
-    let v_rev: Vec<_> = find_xmas(column, rev_word);
-    *sum += v.len();
-    *sum += v_rev.len();
-    (v, v_rev)
+fn xmas_sum(column: &str, word: &str, rev_word: &str, sum: &mut usize) {
+    *sum += find_xmas(column, word);
+    *sum += find_xmas(column, rev_word)
 }
 
-fn find_xmas<'a>(line: &'a str, word: &str) -> Vec<(usize, &'a str)> {
-    line.match_indices(word).collect()
+fn find_xmas(line: &str, word: &str) -> usize {
+    line.match_indices(word).count()
 }
 
 pub fn part2(contents: String) -> String {
