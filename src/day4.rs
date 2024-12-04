@@ -20,7 +20,7 @@ pub fn part1(contents: String) -> String {
         let column: String = (0..max_x)
             .map(|y1| lines[y1].as_bytes()[x] as char)
             .collect();
-        let (v, v_rev) = xmas_sum(&column, word, rev_word, &mut sum);
+        xmas_sum(&column, word, rev_word, &mut sum);
         // println!("Line matches {:?} => {:?} / {:?}", column, v, v_rev);
     }
 
@@ -110,6 +110,10 @@ pub fn part2(contents: String) -> String {
     let max_x = lines[0].len();
     let max_y = lines.len();
     let mut sum = 0;
+
+    let mas = ['M', 'S'];
+    let sam = ['S', 'M'];
+
     for x in 0..max_x - 2 {
         for y in 0..max_y - 2 {
             let center = lines[y + 1][x + 1];
@@ -118,15 +122,17 @@ pub fn part2(contents: String) -> String {
             }
             let corner_ul = lines[y][x];
             let corner_dr = lines[y + 2][x + 2];
-            let mut first = [corner_ul, corner_dr].to_vec();
-            first.sort();
+            let first = [corner_ul, corner_dr];
+            if !(first == mas || first == sam) {
+                continue;
+            }
             let corner_ur = lines[y][x + 2];
             let corner_dl = lines[y + 2][x];
-            let mut second = [corner_ur, corner_dl].to_vec();
-            second.sort();
-            if first == ['M', 'S'] && second == ['M', 'S'] {
-                sum += 1;
+            let second = [corner_ur, corner_dl];
+            if !(second == mas || second == sam) {
+                continue;
             }
+            sum += 1;
         }
     }
     sum.to_string()
