@@ -5,15 +5,12 @@ pub fn part1(contents: String) -> String {
     let lines: Vec<_> = contents.lines().collect();
     let max_x = lines[0].len();
     let max_y = lines.len();
-    // println!("{} {}", max_x, max_y);
     // horizontal
     for line in lines.iter() {
-        // println!("Line: {}", line);
         let v = find_xmas(line, word);
         sum += v.len();
         let v_rev: Vec<_> = find_xmas(line, rev_word);
         sum += v_rev.len();
-        // println!("Line matches {:?} / {:?}", v, v_rev);
     }
     // vertical
     for x in 0..max_x {
@@ -21,11 +18,9 @@ pub fn part1(contents: String) -> String {
             .map(|y1| lines[y1].as_bytes()[x] as char)
             .collect();
         xmas_sum(&column, word, rev_word, &mut sum);
-        // println!("Line matches {:?} => {:?} / {:?}", column, v, v_rev);
     }
 
     // diagonal down left / up right
-    // todo: missing: y
     for start_x in 0..max_x {
         let end = max_x - start_x;
         let column: String = (0..end)
@@ -37,7 +32,6 @@ pub fn part1(contents: String) -> String {
             .collect();
 
         xmas_sum(&column, word, rev_word, &mut sum);
-        // println!("Diagonal x 1 {:?}", column);
     }
     for start_y in 0..max_y {
         let end = max_y - start_y;
@@ -49,10 +43,9 @@ pub fn part1(contents: String) -> String {
             })
             .collect();
         xmas_sum(&column, word, rev_word, &mut sum);
-        // println!("Diagonal y 1 {:?}", column);
     }
 
-    // diagonal down right / up
+    // diagonal down right / up left
     for start_x in 0..max_x {
         let end = max_x - start_x;
         let column: String = (0..end)
@@ -64,8 +57,6 @@ pub fn part1(contents: String) -> String {
             .collect();
 
         xmas_sum(&column, word, rev_word, &mut sum);
-        // println!("Line matches {:?} => {:?} / {:?}", column, v, v_rev);
-        // println!("Diagonal x 2 {:?}", column);
     }
     for start_y in 0..max_y {
         let end = max_y - start_y;
@@ -77,11 +68,8 @@ pub fn part1(contents: String) -> String {
             })
             .collect();
         xmas_sum(&column, word, rev_word, &mut sum);
-        // println!("Diagonal y 2 {:?}", column);
     }
 
-    // down left, down left
-    // up left, up right
     sum.to_string()
 }
 
