@@ -102,8 +102,34 @@ fn find_xmas<'a>(line: &'a str, word: &str) -> Vec<(usize, &'a str)> {
     line.match_indices(word).collect()
 }
 
-pub fn part2(_contents: String) -> String {
-    "example2".to_string()
+pub fn part2(contents: String) -> String {
+    let lines: Vec<Vec<_>> = contents
+        .lines()
+        .map(|l| l.as_bytes().iter().map(|c| *c as char).collect())
+        .collect();
+    let max_x = lines[0].len();
+    let max_y = lines.len();
+    let mut sum = 0;
+    for x in 0..max_x - 2 {
+        for y in 0..max_y - 2 {
+            let center = lines[y + 1][x + 1];
+            if center != 'A' {
+                continue;
+            }
+            let corner_ul = lines[y][x];
+            let corner_dr = lines[y + 2][x + 2];
+            let mut first = [corner_ul, corner_dr].to_vec();
+            first.sort();
+            let corner_ur = lines[y][x + 2];
+            let corner_dl = lines[y + 2][x];
+            let mut second = [corner_ur, corner_dl].to_vec();
+            second.sort();
+            if first == ['M', 'S'] && second == ['M', 'S'] {
+                sum += 1;
+            }
+        }
+    }
+    sum.to_string()
 }
 
 #[cfg(test)]
@@ -124,7 +150,7 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(fs::read_to_string("./input/4/real.txt").unwrap()),
-            "example2"
+            "1921"
         );
     }
 }
