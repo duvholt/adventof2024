@@ -55,10 +55,8 @@ pub fn part2(contents: String) -> String {
     let mut sum = 0;
     for update in parts.next().unwrap().lines() {
         let update = parse_update(update);
-        let failed = is_ordered(&update, &before_order_map);
-        if failed {
-            let new = sort_update(&update, &before_order_map);
-
+        let new = sort_update(&update, &before_order_map);
+        if update != new {
             let middle = new[new.len() / 2];
             sum += middle;
         }
