@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+};
 
 pub fn part1(contents: String) -> String {
     let mut parts = contents.split("\n\n");
@@ -38,7 +41,6 @@ pub fn part2(contents: String) -> String {
     let mut parts = contents.split("\n\n");
     let mut before_order_map: HashMap<u64, HashSet<u64>> = HashMap::new();
     for order in parts.next().unwrap().lines() {
-        dbg!(order);
         let mut o = order.split("|");
         let before = o.next().unwrap().parse().unwrap();
         let after = o.next().unwrap().parse().unwrap();
@@ -53,15 +55,13 @@ pub fn part2(contents: String) -> String {
             if let Some(before) = before_order_map.get(u) {
                 let not_before = update.iter().skip(i + 1).all(|u| !before.contains(u));
                 if !not_before {
-                    println!("Fail!");
                     failed = true;
                     break;
                 }
             }
         }
         if failed {
-            dbg!(&update);
-            let new = fix_order(&update, &before_order_map);
+            let new = sort_update(&update, &before_order_map);
 
             let middle = new[new.len() / 2];
             sum += middle;
@@ -70,39 +70,23 @@ pub fn part2(contents: String) -> String {
     sum.to_string()
 }
 
-fn fix_order(update: &[u64], before_order_map: &HashMap<u64, HashSet<u64>>) -> Vec<u64> {
+fn sort_update(update: &[u64], before_order_map: &HashMap<u64, HashSet<u64>>) -> Vec<u64> {
     let mut new = update.to_vec();
-    let mut i = 0;
-    while i < update.len() {
-        // dbg!(&new);
-        let u = new[i];
-        match before_order_map.get(&u) {
+    new.sort_by(|a, b| {
+        if a == b {
+            return Ordering::Equal;
+        }
+        match before_order_map.get(a) {
             Some(before) => {
-                let first = new
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(ui, u)| {
-                        if before.contains(u) && ui > i {
-                            Some(ui)
-                        } else {
-                            None
-                        }
-                    })
-                    .max();
-                if let Some(f) = first {
-                    // println!("Moving!");
-                    let n = new.remove(i);
-                    // dbg!(f, n, i);
-                    new.insert(f, n);
+                if before.contains(b) {
+                    Ordering::Greater
                 } else {
-                    i += 1;
+                    Ordering::Less
                 }
             }
-            None => {
-                i += 1;
-            }
+            None => Ordering::Less,
         }
-    }
+    });
     new
 }
 
