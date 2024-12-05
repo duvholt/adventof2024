@@ -9,8 +9,8 @@ pub fn part1(contents: String) -> String {
     let mut sum = 0;
     for update in parts.next().unwrap().lines() {
         let update = parse_update(update);
-        let failed = is_ordered(&update, &before_order_map);
-        if !failed {
+        let ordered = is_ordered(&update, &before_order_map);
+        if ordered {
             let middle = update[update.len() / 2];
             sum += middle;
         }
@@ -18,18 +18,31 @@ pub fn part1(contents: String) -> String {
     sum.to_string()
 }
 
+pub fn part2(contents: String) -> String {
+    let mut parts = contents.split("\n\n");
+    let before_order_map = parse_ordering(&mut parts);
+    let mut sum = 0;
+    for update in parts.next().unwrap().lines() {
+        let update = parse_update(update);
+        let new = sort_update(&update, &before_order_map);
+        if update != new {
+            let middle = new[new.len() / 2];
+            sum += middle;
+        }
+    }
+    sum.to_string()
+}
+
 fn is_ordered(update: &[u64], before_order_map: &HashMap<u64, HashSet<u64>>) -> bool {
-    let mut failed = false;
     for (i, u) in update.iter().enumerate() {
         if let Some(before) = before_order_map.get(u) {
             let not_before = update.iter().skip(i + 1).all(|u| !before.contains(u));
             if !not_before {
-                failed = true;
-                break;
+                return false;
             }
         }
     }
-    failed
+    true
 }
 
 fn parse_update(update: &str) -> Vec<u64> {
@@ -47,21 +60,6 @@ fn parse_ordering(parts: &mut std::str::Split<'_, &str>) -> HashMap<u64, HashSet
         a.insert(before);
     }
     before_order_map
-}
-
-pub fn part2(contents: String) -> String {
-    let mut parts = contents.split("\n\n");
-    let before_order_map = parse_ordering(&mut parts);
-    let mut sum = 0;
-    for update in parts.next().unwrap().lines() {
-        let update = parse_update(update);
-        let new = sort_update(&update, &before_order_map);
-        if update != new {
-            let middle = new[new.len() / 2];
-            sum += middle;
-        }
-    }
-    sum.to_string()
 }
 
 fn sort_update(update: &[u64], before_order_map: &HashMap<u64, HashSet<u64>>) -> Vec<u64> {
