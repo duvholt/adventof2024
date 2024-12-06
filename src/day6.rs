@@ -104,10 +104,13 @@ fn find_loop(
     start_position: (isize, isize),
     grid: &Grid,
 ) -> bool {
+    let new_block = (x, y);
+
     let mut position = start_position;
     let mut direction = Direction::Up;
     let mut looped = false;
-    let mut visited_with_dir = HashSet::new();
+    let mut visited_with_dir =
+        HashSet::with_capacity_and_hasher((x * y) as usize, rustc_hash::FxBuildHasher);
 
     loop {
         let rel = direction_to_rel(&direction);
@@ -116,7 +119,7 @@ fn find_loop(
             break;
         }
         let infront = grid[new_pos.1 as usize][new_pos.0 as usize];
-        if infront == '#' || new_pos == (x, y) {
+        if infront == '#' || new_pos == new_block {
             let pos_with_dir = (position, direction.clone());
             if visited_with_dir.contains(&pos_with_dir) {
                 // loopy
