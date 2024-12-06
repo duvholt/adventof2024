@@ -23,10 +23,17 @@ pub fn part1(contents: String) -> String {
     let grid: Grid = contents.lines().map(|l| l.chars().collect()).collect();
     let max_x: isize = grid[0].len() as isize;
     let max_y: isize = grid.len() as isize;
+    let visited = find_visited_positions(max_y, max_x, &grid);
+
+    // print_map(&grid, &visited);
+    visited.len().to_string()
+}
+
+fn find_visited_positions(max_y: isize, max_x: isize, grid: &Grid) -> HashSet<(isize, isize)> {
     let mut visited = HashSet::new();
     let mut direction = Direction::Up;
 
-    let mut position = find_start_position(max_y, max_x, &grid);
+    let mut position = find_start_position(max_y, max_x, grid);
 
     loop {
         visited.insert(position);
@@ -42,9 +49,7 @@ pub fn part1(contents: String) -> String {
             position = new_pos;
         }
     }
-
-    // print_map(&grid, &visited);
-    visited.len().to_string()
+    visited
 }
 
 pub fn part2(contents: String) -> String {
@@ -55,17 +60,17 @@ pub fn part2(contents: String) -> String {
 
     let mut loops = 0;
 
+    let visited = find_visited_positions(max_y, max_x, &grid);
+
     // lets go bruteforcing
-    for y in 0..max_y {
-        for x in 0..max_x {
-            // skip start
-            if start_position.0 == x && start_position.1 == y {
-                continue;
-            }
-            let looped = find_loop(x, y, max_x, max_y, start_position, &grid);
-            if looped {
-                loops += 1;
-            }
+    for (x, y) in visited {
+        // skip start
+        if start_position.0 == x && start_position.1 == y {
+            continue;
+        }
+        let looped = find_loop(x, y, max_x, max_y, start_position, &grid);
+        if looped {
+            loops += 1;
         }
     }
 
@@ -136,6 +141,7 @@ fn find_loop(
     looped
 }
 
+#[allow(dead_code)]
 fn print_map(grid: &Grid, visited: &HashSet<(isize, isize)>) {
     for y in 0..grid.len() {
         let mut line = String::new();
