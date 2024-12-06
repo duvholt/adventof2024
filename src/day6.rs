@@ -43,7 +43,7 @@ pub fn part1(contents: String) -> String {
         }
     }
 
-    print_map(&grid, &visited);
+    // print_map(&grid, &visited);
     visited.len().to_string()
 }
 
@@ -110,13 +110,6 @@ fn find_loop(
     let mut visited_with_dir = HashSet::new();
 
     loop {
-        let pos_with_dir = (position, direction.clone());
-        if visited_with_dir.contains(&pos_with_dir) {
-            // loopy
-            looped = true;
-            break;
-        }
-        visited_with_dir.insert(pos_with_dir);
         let rel = direction_to_rel(&direction);
         let new_pos = ((position.0 + rel.0) as isize, (position.1 + rel.1) as isize);
         if bounds_check(new_pos, max_x, max_y) {
@@ -124,6 +117,14 @@ fn find_loop(
         }
         let infront = grid[new_pos.1 as usize][new_pos.0 as usize];
         if infront == '#' || new_pos == (x, y) {
+            let pos_with_dir = (position, direction.clone());
+            if visited_with_dir.contains(&pos_with_dir) {
+                // loopy
+                looped = true;
+                break;
+            }
+            visited_with_dir.insert(pos_with_dir);
+
             direction = rotate(&direction)
         } else {
             position = new_pos;
