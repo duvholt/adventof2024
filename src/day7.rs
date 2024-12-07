@@ -2,10 +2,25 @@ pub fn part1(contents: String) -> String {
     let parsed = parse(contents);
 
     let mut sum = 0;
+    let mut stack = Vec::new();
     for (result, numbers) in parsed {
-        if solve(result, numbers[0], &numbers[1..]) {
-            sum += result;
+        stack.push((numbers[0], 1));
+        while let Some((sofar, i)) = stack.pop() {
+            if numbers.len() == i {
+                if sofar == result {
+                    sum += result;
+                    break;
+                }
+                continue;
+            }
+            if sofar > result {
+                continue;
+            }
+            let next = numbers[i];
+            stack.push((sofar + next, i + 1));
+            stack.push((sofar * next, i + 1));
         }
+        stack.clear();
     }
 
     sum.to_string()
@@ -15,54 +30,29 @@ pub fn part2(contents: String) -> String {
     let parsed = parse(contents);
 
     let mut sum = 0;
+    let mut stack = Vec::new();
     for (result, numbers) in parsed {
-        if solve2(result, numbers[0], &numbers[1..]) {
-            sum += result;
+        stack.push((numbers[0], 1));
+        while let Some((sofar, i)) = stack.pop() {
+            if numbers.len() == i {
+                if sofar == result {
+                    sum += result;
+                    break;
+                }
+                continue;
+            }
+            if sofar > result {
+                continue;
+            }
+            let next = numbers[i];
+            stack.push((sofar + next, i + 1));
+            stack.push((sofar * next, i + 1));
+            stack.push((concat(sofar, next), i + 1));
         }
+        stack.clear();
     }
 
     sum.to_string()
-}
-
-fn solve(result: u64, sofar: u64, numbers: &[u64]) -> bool {
-    if numbers.is_empty() {
-        if sofar == result {
-            return true;
-        }
-        return false;
-    }
-    let current = numbers[0];
-    if solve(result, sofar + current, &numbers[1..]) {
-        return true;
-    }
-    if solve(result, sofar * current, &numbers[1..]) {
-        return true;
-    }
-    false
-}
-
-fn solve2(result: u64, sofar: u64, numbers: &[u64]) -> bool {
-    if numbers.is_empty() {
-        if sofar == result {
-            return true;
-        }
-        return false;
-    }
-    let current = numbers[0];
-    let concat = concat(sofar, current);
-    if solve2(result, concat, &numbers[1..]) {
-        return true;
-    }
-    let mult = sofar * current;
-    if solve2(result, mult, &numbers[1..]) {
-        return true;
-    }
-    let plus = sofar + current;
-    if solve2(result, plus, &numbers[1..]) {
-        return true;
-    }
-
-    false
 }
 
 fn concat(sofar: u64, current: u64) -> u64 {
