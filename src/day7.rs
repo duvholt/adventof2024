@@ -66,8 +66,7 @@ fn solve2(result: u64, sofar: u64, numbers: &[u64]) -> bool {
 }
 
 fn concat(sofar: u64, current: u64) -> u64 {
-    let len = ((current + 1) as f64).log10().ceil() as u32;
-    sofar * (10u64.pow(len)) + current
+    sofar * (10u64.pow(current.ilog10() + 1)) + current
 }
 
 fn parse(contents: String) -> Vec<(u64, Vec<u64>)> {
