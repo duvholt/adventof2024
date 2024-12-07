@@ -1,23 +1,9 @@
 pub fn part1(contents: String) -> String {
-    let parsed: Vec<(u64, Vec<u64>)> = contents
-        .lines()
-        .map(|line| {
-            let mut parts = line.split(": ");
-            let result: u64 = parts.next().unwrap().parse().unwrap();
-            let numbers: Vec<u64> = parts
-                .next()
-                .unwrap()
-                .split_ascii_whitespace()
-                .map(|n| n.parse().unwrap())
-                .collect();
-            (result, numbers)
-        })
-        .collect();
+    let parsed = parse(contents);
 
     let mut sum = 0;
     for (result, numbers) in parsed {
-        let local_solutions = solve(result, numbers[0], &numbers[1..]);
-        if local_solutions > 0 {
+        if solve(result, numbers[0], &numbers[1..]) {
             sum += result;
         }
     }
@@ -26,20 +12,7 @@ pub fn part1(contents: String) -> String {
 }
 
 pub fn part2(contents: String) -> String {
-    let parsed: Vec<(u128, Vec<u128>)> = contents
-        .lines()
-        .map(|line| {
-            let mut parts = line.split(": ");
-            let result: u128 = parts.next().unwrap().parse().unwrap();
-            let numbers: Vec<u128> = parts
-                .next()
-                .unwrap()
-                .split_ascii_whitespace()
-                .map(|n| n.parse().unwrap())
-                .collect();
-            (result, numbers)
-        })
-        .collect();
+    let parsed = parse(contents);
 
     let mut sum = 0;
     for (result, numbers) in parsed {
@@ -51,7 +24,24 @@ pub fn part2(contents: String) -> String {
     sum.to_string()
 }
 
-fn solve2(result: u128, sofar: u128, numbers: &[u128]) -> bool {
+fn solve(result: u64, sofar: u64, numbers: &[u64]) -> bool {
+    if numbers.is_empty() {
+        if sofar == result {
+            return true;
+        }
+        return false;
+    }
+    let current = numbers[0];
+    if solve(result, sofar + current, &numbers[1..]) {
+        return true;
+    }
+    if solve(result, sofar * current, &numbers[1..]) {
+        return true;
+    }
+    false
+}
+
+fn solve2(result: u64, sofar: u64, numbers: &[u64]) -> bool {
     if numbers.is_empty() {
         if sofar == result {
             return true;
@@ -75,23 +65,27 @@ fn solve2(result: u128, sofar: u128, numbers: &[u128]) -> bool {
     false
 }
 
-fn concat(sofar: u128, current: u128) -> u128 {
+fn concat(sofar: u64, current: u64) -> u64 {
     let len = ((current + 1) as f64).log10().ceil() as u32;
-    sofar * (10u128.pow(len)) + current
+    sofar * (10u64.pow(len)) + current
 }
 
-fn solve(result: u64, sofar: u64, numbers: &[u64]) -> u64 {
-    let mut sum = 0;
-    if sofar == result {
-        sum += 1;
-    }
-    if numbers.is_empty() {
-        return sum;
-    }
-    let current = numbers[0];
-    sum += solve(result, sofar + current, &numbers[1..]);
-    sum += solve(result, sofar * current, &numbers[1..]);
-    sum
+fn parse(contents: String) -> Vec<(u64, Vec<u64>)> {
+    let parsed: Vec<(u64, Vec<u64>)> = contents
+        .lines()
+        .map(|line| {
+            let mut parts = line.split(": ");
+            let result: u64 = parts.next().unwrap().parse().unwrap();
+            let numbers: Vec<u64> = parts
+                .next()
+                .unwrap()
+                .split_ascii_whitespace()
+                .map(|n| n.parse().unwrap())
+                .collect();
+            (result, numbers)
+        })
+        .collect();
+    parsed
 }
 
 #[cfg(test)]
