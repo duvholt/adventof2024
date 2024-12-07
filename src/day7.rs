@@ -56,7 +56,11 @@ pub fn part2(contents: String) -> String {
 }
 
 fn concat(sofar: u64, current: u64) -> u64 {
-    sofar * (10u64.pow(current.ilog10() + 1)) + current
+    let mut pow = 10;
+    while current >= pow {
+        pow *= 10;
+    }
+    sofar * pow + current
 }
 
 fn parse(contents: String) -> Vec<(u64, Vec<u64>)> {
