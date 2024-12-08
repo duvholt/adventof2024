@@ -3,7 +3,8 @@ use std::collections::{HashMap, HashSet};
 pub fn part1(contents: String) -> String {
     let (max_x, max_y, freq_map) = parse(contents);
 
-    let mut antinodes = HashSet::new();
+    let mut antinodes =
+        HashSet::with_capacity_and_hasher((max_x * max_y) as usize, rustc_hash::FxBuildHasher);
 
     for (_freq, values) in freq_map {
         for value1 in values.iter() {
@@ -34,7 +35,8 @@ pub fn part1(contents: String) -> String {
 pub fn part2(contents: String) -> String {
     let (max_x, max_y, freq_map) = parse(contents);
 
-    let mut antinodes = HashSet::new();
+    let mut antinodes =
+        HashSet::with_capacity_and_hasher((max_x * max_y) as usize, rustc_hash::FxBuildHasher);
 
     for (_freq, values) in freq_map {
         for value1 in values.iter() {
