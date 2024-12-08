@@ -1,34 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
 pub fn part1(contents: String) -> String {
-    let grid: Vec<Vec<char>> = contents
-        .lines()
-        .map(|line| line.chars().collect())
-        .collect();
-    let max_x = grid[0].len() as isize;
-    let max_y = grid.len() as isize;
-    let grid_map: HashMap<(isize, isize), char> = grid
-        .into_iter()
-        .enumerate()
-        .flat_map(|(y, line)| {
-            line.into_iter().enumerate().filter_map(move |(x, char)| {
-                if char == '.' {
-                    None
-                } else {
-                    Some(((x as isize, y as isize), char))
-                }
-            })
-        })
-        .collect();
-    let mut reverse_map: HashMap<char, Vec<(isize, isize)>> = HashMap::new();
-    for (&pos, &freq) in grid_map.iter() {
-        let entry = reverse_map.entry(freq).or_default();
-        entry.push(pos);
-    }
+    let (max_x, max_y, freq_map) = parse(contents);
 
     let mut antinodes = HashSet::new();
 
-    for (freq, values) in reverse_map {
+    for (_freq, values) in freq_map {
         for value1 in values.iter() {
             for value2 in values.iter() {
                 if value1 == value2 {
@@ -55,34 +32,11 @@ pub fn part1(contents: String) -> String {
 }
 
 pub fn part2(contents: String) -> String {
-    let grid: Vec<Vec<char>> = contents
-        .lines()
-        .map(|line| line.chars().collect())
-        .collect();
-    let max_x = grid[0].len() as isize;
-    let max_y = grid.len() as isize;
-    let grid_map: HashMap<(isize, isize), char> = grid
-        .into_iter()
-        .enumerate()
-        .flat_map(|(y, line)| {
-            line.into_iter().enumerate().filter_map(move |(x, char)| {
-                if char == '.' {
-                    None
-                } else {
-                    Some(((x as isize, y as isize), char))
-                }
-            })
-        })
-        .collect();
-    let mut reverse_map: HashMap<char, Vec<(isize, isize)>> = HashMap::new();
-    for (&pos, &freq) in grid_map.iter() {
-        let entry = reverse_map.entry(freq).or_default();
-        entry.push(pos);
-    }
+    let (max_x, max_y, freq_map) = parse(contents);
 
     let mut antinodes = HashSet::new();
 
-    for (freq, values) in reverse_map {
+    for (_freq, values) in freq_map {
         for value1 in values.iter() {
             for value2 in values.iter() {
                 if value1 == value2 {
@@ -111,6 +65,29 @@ pub fn part2(contents: String) -> String {
     antinodes.len().to_string()
 }
 
+type FrequencyMap = HashMap<char, Vec<(isize, isize)>>;
+
+fn parse(contents: String) -> (isize, isize, FrequencyMap) {
+    let grid: Vec<Vec<char>> = contents
+        .lines()
+        .map(|line| line.chars().collect())
+        .collect();
+    let max_x = grid[0].len() as isize;
+    let max_y = grid.len() as isize;
+
+    let mut freq_map: HashMap<char, Vec<(isize, isize)>> = HashMap::new();
+    for (y, line) in grid.into_iter().enumerate() {
+        for (x, freq) in line.into_iter().enumerate() {
+            if freq != '.' {
+                let pos = (x as isize, y as isize);
+                let entry = freq_map.entry(freq).or_default();
+                entry.push(pos);
+            }
+        }
+    }
+    (max_x, max_y, freq_map)
+}
+
 fn inbounds(pos: (isize, isize), max_x: isize, max_y: isize) -> bool {
     pos.0 >= 0 && pos.0 < max_x && pos.1 >= 0 && pos.1 < max_y
 }
@@ -125,7 +102,7 @@ mod tests {
     fn test_part1() {
         assert_eq!(
             part1(fs::read_to_string("./input/8/real.txt").unwrap()),
-            "example"
+            "351"
         );
     }
 
@@ -133,7 +110,7 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(fs::read_to_string("./input/8/real.txt").unwrap()),
-            "example2"
+            "1259"
         );
     }
 }
