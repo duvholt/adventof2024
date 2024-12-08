@@ -7,9 +7,9 @@ pub fn part1(contents: String) -> String {
         HashSet::with_capacity_and_hasher((max_x * max_y) as usize, rustc_hash::FxBuildHasher);
 
     for (_freq, values) in freq_map {
-        for value1 in values.iter() {
-            for value2 in values.iter() {
-                if value1 == value2 {
+        for (i1, value1) in values.iter().enumerate() {
+            for (i2, value2) in values.iter().enumerate() {
+                if i2 <= i1 {
                     continue;
                 }
 
@@ -39,9 +39,9 @@ pub fn part2(contents: String) -> String {
         HashSet::with_capacity_and_hasher((max_x * max_y) as usize, rustc_hash::FxBuildHasher);
 
     for (_freq, values) in freq_map {
-        for value1 in values.iter() {
-            for value2 in values.iter() {
-                if value1 == value2 {
+        for (i1, value1) in values.iter().enumerate() {
+            for (i2, value2) in values.iter().enumerate() {
+                if i2 <= i1 {
                     continue;
                 }
 
