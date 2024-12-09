@@ -23,13 +23,13 @@ pub fn part1(contents: String) -> String {
             }
         }
     }
-    let mut compacted_disk_map = vec![0; disk_length as usize];
+    let mut compacted_disk_map = Vec::with_capacity(disk_length as usize);
     let mut disk_j: usize = disk_map.len() - 1;
     for i in 0..disk_length as usize {
         let disk_value = disk_map[i];
         match disk_value {
             Some(id) => {
-                compacted_disk_map[i] = id;
+                compacted_disk_map.push(id);
             }
             None => {
                 let mut end = None;
@@ -37,7 +37,7 @@ pub fn part1(contents: String) -> String {
                     end = disk_map[disk_j];
                     disk_j -= 1;
                 }
-                compacted_disk_map[i] = end.unwrap();
+                compacted_disk_map.push(end.unwrap());
             }
         }
     }
@@ -53,9 +53,8 @@ pub fn part1(contents: String) -> String {
 pub fn part2(contents: String) -> String {
     let mut nodes = parse(contents);
 
-    let mut compacted_nodes = vec![];
+    let mut compacted_nodes = Vec::with_capacity(nodes.len() / 2);
 
-    // let mut disk_i: usize = 0;
     for i in 0..nodes.len() {
         if i >= nodes.len() {
             break;
@@ -63,72 +62,76 @@ pub fn part2(contents: String) -> String {
         let node = nodes[i].clone();
         match node {
             Node::Empty(empty_length) => {
-                fill(&mut nodes, empty_length, &mut compacted_nodes, i);
+                defragment(&mut compacted_nodes, &mut nodes, empty_length, i);
             }
             Node::Block(id, length) => {
-                compacted_nodes.push((id, length));
+                compacted_nodes.push((Some(id), length));
             }
         }
     }
 
-    let mut i: u64 = 0;
+    let mut i: u32 = 0;
     let mut sum: u64 = 0;
-    for (id, length) in compacted_nodes {
-        if id > 1000000 {
-            i += length as u64;
-        } else {
-            for _ in 0..length {
-                sum += i * id as u64;
-                i += 1;
+    for (node, length) in compacted_nodes {
+        match node {
+            Some(id) => {
+                for _ in 0..length {
+                    sum += i as u64 * id as u64;
+                    i += 1;
+                }
             }
+            None => i += length,
         }
     }
 
     sum.to_string()
 }
 
-fn fill(
-    nodes: &mut Vec<Node>,
+fn defragment(
+    compacted_nodes: &mut Vec<(Option<usize>, u32)>,
+    nodes: &mut [Node],
     empty_length: u32,
-    compacted_nodes: &mut Vec<(usize, u32)>,
     i: usize,
 ) {
-    let mut end = None;
+    let mut remaining = empty_length;
+    while remaining > 0 {
+        let block = find_block(nodes, remaining, i);
+        if let Some(((id, length), j)) = block {
+            nodes[j] = Node::Empty(length);
+            compacted_nodes.push((Some(id), length));
+            remaining -= length;
+        } else {
+            break;
+        }
+    }
+    if remaining > 0 {
+        compacted_nodes.push((None, remaining));
+    }
+}
+
+fn find_block(nodes: &[Node], empty_length: u32, i: usize) -> Option<((usize, u32), usize)> {
     let mut j = nodes.len() - 1;
-    while end.is_none() {
-        end = match nodes[j].clone() {
+    loop {
+        match nodes[j] {
             Node::Block(id, length) => {
                 if length <= empty_length {
-                    Some((id, length))
-                } else {
-                    None
+                    return Some(((id, length), j));
                 }
             }
-            Node::Empty(_) => None,
+            Node::Empty(_) => {}
         };
-        if end.is_some() {
-            nodes.remove(j);
-            nodes.insert(j, Node::Empty(end.unwrap().1));
-        }
         if j == 0 || j <= i {
             break;
         }
         j -= 1;
     }
-    if let Some(end) = end {
-        compacted_nodes.push(end);
-        let remaining = empty_length - end.1;
-        if remaining > 0 {
-            fill(nodes, remaining, compacted_nodes, i);
-        }
-    } else {
-        compacted_nodes.push((usize::MAX, empty_length));
-    }
+    None
 }
 
 fn parse(contents: String) -> Vec<Node> {
     let nodes: Vec<Node> = contents
         .chars()
+        .filter(|c| !c.is_whitespace())
         .enumerate()
         .map(|(i, c)| {
             let length = c.to_digit(10).unwrap();
