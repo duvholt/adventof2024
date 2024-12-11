@@ -8,7 +8,7 @@ pub fn part1(_contents: String) -> String {
         .map(|c| c.parse().unwrap())
         .collect();
 
-    for iteration in 0..75 {
+    for iteration in 0..25 {
         let mut i = 0;
         while i < stones.len() {
             let stone = stones[i];
@@ -38,7 +38,38 @@ pub fn part1(_contents: String) -> String {
 }
 
 pub fn part2(_contents: String) -> String {
-    "example2".to_string()
+    let mut stones: Vec<u64> = _contents
+        .split_ascii_whitespace()
+        .map(|c| c.parse().unwrap())
+        .collect();
+
+    for iteration in 0..75 {
+        let mut i = 0;
+        while i < stones.len() {
+            let stone = stones[i];
+            if stone == 0 {
+                stones[i] = 1;
+                i += 1;
+                continue;
+            }
+            let stone_s = stone.to_string();
+            if stone_s.len() % 2 == 0 {
+                let middle = stone_s.len() / 2;
+                let l = &stone_s[0..middle];
+                let r = &stone_s[middle..];
+                stones.insert(i, l.parse().unwrap());
+                i += 1;
+                stones[i] = r.parse().unwrap();
+                i += 1;
+                continue;
+            } else {
+                stones[i] *= 2024;
+                i += 1;
+            }
+        }
+        dbg!(iteration, stones.len());
+    }
+    stones.len().to_string()
 }
 
 #[cfg(test)]
