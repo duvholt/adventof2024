@@ -2,7 +2,9 @@
 // If the stone is engraved with a number that has an even number of digits, it is replaced by two stones. The left half of the digits are engraved on the new left stone, and the right half of the digits are engraved on the new right stone. (The new numbers don't keep extra leading zeroes: 1000 would become stones 10 and 0.)
 // If none of the other rules apply, the stone is replaced by a new stone; the old stone's number multiplied by 2024 is engraved on the new stone.
 
-use std::collections::HashSet;
+use std::collections::HashMap;
+
+use rustc_hash::{FxBuildHasher, FxHashMap};
 
 pub fn part1(contents: String) -> String {
     solve(contents, 25)
@@ -30,27 +32,19 @@ fn solve(contents: String, iterations: usize) -> String {
                 stones[i] = (stone * 2024, count);
             }
         }
-        stones = dedup(&stones);
+        stones = dedup(stones);
     }
     stones.into_iter().map(|(_, s)| s).sum::<u64>().to_string()
 }
 
-fn dedup(stones: &Vec<(u64, u64)>) -> Vec<(u64, u64)> {
-    let set: HashSet<u64> = stones.iter().map(|(s, _)| *s).collect();
-    let deduped = set
-        .into_iter()
-        .map(|stone| {
-            (
-                stone,
-                stones
-                    .iter()
-                    .filter(|(s, _)| stone == *s)
-                    .map(|(_, s)| s)
-                    .sum(),
-            )
-        })
-        .collect();
-    deduped
+fn dedup(stones: Vec<(u64, u64)>) -> Vec<(u64, u64)> {
+    let mut map: FxHashMap<u64, u64> =
+        HashMap::with_capacity_and_hasher(stones.len(), FxBuildHasher);
+    for (stone, count) in stones {
+        let entry = map.entry(stone).or_default();
+        *entry += count;
+    }
+    map.into_iter().collect()
 }
 
 fn can_split(stone: u64) -> Option<(u64, u64)> {
