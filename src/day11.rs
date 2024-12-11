@@ -42,12 +42,16 @@ fn solve(_contents: String, iterations: usize) -> String {
 }
 
 fn can_split(stone: u64) -> Option<(u64, u64)> {
-    let stone_s = stone.to_string();
-    if stone_s.len() % 2 == 0 {
-        let middle = stone_s.len() / 2;
-        let l = &stone_s[0..middle];
-        let r = &stone_s[middle..];
-        return Some((l.parse().unwrap(), r.parse().unwrap()));
+    let mut pow = 10;
+    let mut length = 1;
+    while stone >= pow {
+        pow *= 10;
+        length += 1;
+    }
+    if length % 2 == 0 {
+        let middle = length / 2;
+        let pow_middle = 10u64.pow(middle);
+        return Some((stone / pow_middle, stone % pow_middle));
     }
     None
 }
