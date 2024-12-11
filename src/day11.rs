@@ -4,38 +4,30 @@
 
 use std::collections::HashSet;
 
-pub fn part1(_contents: String) -> String {
-    solve(_contents, 25)
+pub fn part1(contents: String) -> String {
+    solve(contents, 25)
 }
 
-pub fn part2(_contents: String) -> String {
-    solve(_contents, 75)
+pub fn part2(contents: String) -> String {
+    solve(contents, 75)
 }
 
-fn solve(_contents: String, iterations: usize) -> String {
-    let mut stones: Vec<(u64, u64)> = _contents
+fn solve(contents: String, iterations: usize) -> String {
+    let mut stones: Vec<(u64, u64)> = contents
         .split_ascii_whitespace()
         .map(|c| (c.parse().unwrap(), 1))
         .collect();
 
-    for iteration in 0..iterations {
-        let mut i = 0;
-        let original_len = stones.len();
-        while i < original_len {
+    for _iteration in 0..iterations {
+        for i in 0..stones.len() {
             let (stone, count) = stones[i];
             if stone == 0 {
                 stones[i] = (1, count);
-                i += 1;
-                continue;
-            }
-            if let Some((l, r)) = can_split(stone) {
+            } else if let Some((l, r)) = can_split(stone) {
                 stones[i] = (l, count);
                 stones.push((r, count));
-                i += 1;
-                continue;
             } else {
                 stones[i] = (stone * 2024, count);
-                i += 1;
             }
         }
         stones = dedup(&stones);
