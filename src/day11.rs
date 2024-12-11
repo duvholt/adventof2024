@@ -37,6 +37,44 @@ fn solve(contents: String, iterations: usize) -> String {
     stones.into_iter().map(|(_, s)| s).sum::<u64>().to_string()
 }
 
+#[allow(dead_code)]
+fn solve_memoization(contents: String, iterations: usize) -> String {
+    let stones: Vec<u64> = contents
+        .split_ascii_whitespace()
+        .map(|c| (c.parse().unwrap()))
+        .collect();
+
+    let mut sum = 0;
+    let mut memo = FxHashMap::default();
+    for stone in stones {
+        sum += stone_memoization(&mut memo, stone, iterations)
+    }
+    sum.to_string()
+}
+
+fn stone_memoization(
+    memo: &mut FxHashMap<(u64, usize), u64>,
+    stone: u64,
+    iterations: usize,
+) -> u64 {
+    if iterations == 0 {
+        return 1;
+    }
+    let key = (stone, iterations);
+    if let Some(&memoized) = memo.get(&key) {
+        return memoized;
+    }
+    let result = if stone == 0 {
+        stone_memoization(memo, 1, iterations - 1)
+    } else if let Some((l, r)) = can_split(stone) {
+        stone_memoization(memo, l, iterations - 1) + stone_memoization(memo, r, iterations - 1)
+    } else {
+        stone_memoization(memo, stone * 2024, iterations - 1)
+    };
+    memo.insert(key, result);
+    result
+}
+
 fn dedup(stones: Vec<(u64, u64)>) -> Vec<(u64, u64)> {
     let mut map: FxHashMap<u64, u64> =
         HashMap::with_capacity_and_hasher(stones.len(), FxBuildHasher);
