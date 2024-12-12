@@ -6,13 +6,122 @@ pub fn part1(contents: String) -> String {
     let areas = find_areas(grid);
     areas
         .into_iter()
-        .map(|(perimeter, area)| perimeter * area as u64)
+        .map(|(area, perimeter)| perimeter as u64 * area.len() as u64)
         .sum::<u64>()
         .to_string()
 }
 
 pub fn part2(contents: String) -> String {
-    todo!()
+    let grid = parse(contents);
+
+    let areas = find_areas(grid);
+    let mut sum = 0;
+    for (points, _) in areas {
+        let points: HashSet<_> = points.into_iter().collect();
+        let mut min_x = usize::MAX;
+        let mut max_x = usize::MIN;
+        let mut min_y = usize::MAX;
+        let mut max_y = usize::MIN;
+        for &(x, y) in points.iter() {
+            if x < min_x {
+                min_x = x;
+            }
+            if x > max_x {
+                max_x = x;
+            }
+            if y < min_y {
+                min_y = y;
+            }
+            if y > max_y {
+                max_y = y;
+            }
+        }
+        // up edges
+        let mut up_edges = 0;
+        for y in min_y..=max_y {
+            let mut has_prev = false;
+            for x in min_x..=max_x {
+                let point = (x, y);
+
+                if !points.contains(&point) {
+                    has_prev = false;
+                    continue;
+                }
+                // up edges
+                if (y == 0) || !points.contains(&(x, y - 1)) {
+                    if !has_prev {
+                        up_edges += 1;
+                        has_prev = true;
+                    }
+                } else {
+                    has_prev = false;
+                }
+            }
+        }
+        let mut down_edges = 0;
+        for y in min_y..=max_y {
+            let mut has_prev = false;
+            for x in min_x..=max_x {
+                let point = (x, y);
+                if !points.contains(&point) {
+                    has_prev = false;
+                    continue;
+                }
+                // down
+                if !points.contains(&(x, y + 1)) {
+                    if !has_prev {
+                        down_edges += 1;
+                        has_prev = true;
+                    }
+                } else {
+                    has_prev = false;
+                }
+            }
+        }
+        let mut left_edges = 0;
+        for x in min_x..=max_x {
+            let mut has_prev = false;
+            for y in min_y..=max_y {
+                let point = (x, y);
+                if !points.contains(&point) {
+                    has_prev = false;
+                    continue;
+                }
+                // left edges
+                if (x == 0) || !points.contains(&(x - 1, y)) {
+                    if !has_prev {
+                        left_edges += 1;
+                        has_prev = true;
+                    }
+                } else {
+                    has_prev = false;
+                }
+            }
+        }
+        let mut right_edges = 0;
+        for x in min_x..=max_x {
+            let mut has_prev = false;
+            for y in min_y..=max_y {
+                let point = (x, y);
+                if !points.contains(&point) {
+                    has_prev = false;
+                    continue;
+                }
+                // right
+                if !points.contains(&(x + 1, y)) {
+                    if !has_prev {
+                        right_edges += 1;
+                        has_prev = true;
+                    }
+                } else {
+                    has_prev = false;
+                }
+            }
+        }
+
+        sum += points.len() * (up_edges + down_edges + right_edges + left_edges);
+    }
+    sum.to_string()
 }
 
 fn parse(contents: String) -> Vec<Vec<char>> {
@@ -20,7 +129,7 @@ fn parse(contents: String) -> Vec<Vec<char>> {
     grid
 }
 
-fn find_areas(grid: Vec<Vec<char>>) -> Vec<(u64, usize)> {
+fn find_areas(grid: Vec<Vec<char>>) -> Vec<(Vec<(usize, usize)>, usize)> {
     let mut visited = HashSet::new();
     let mut areas = Vec::new();
     for y in 0..grid.len() {
@@ -30,7 +139,7 @@ fn find_areas(grid: Vec<Vec<char>>) -> Vec<(u64, usize)> {
                 continue;
             }
             let mut perimeter = 0;
-            let mut area = 0;
+            let mut area = Vec::new();
             let mut stack = Vec::new();
             stack.push(point);
             while let Some(stack_point) = stack.pop() {
@@ -40,7 +149,7 @@ fn find_areas(grid: Vec<Vec<char>>) -> Vec<(u64, usize)> {
                 visited.insert(stack_point);
                 let neighbours = neighbourhood(&grid, stack_point);
                 perimeter += 4 - neighbours.len();
-                area += 1;
+                area.push(stack_point);
                 for n in neighbours {
                     if !visited.contains(&n) {
                         stack.push(n);
@@ -105,7 +214,7 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(fs::read_to_string("./input/12/real.txt").unwrap()),
-            "example2"
+            "893676"
         );
     }
 }
