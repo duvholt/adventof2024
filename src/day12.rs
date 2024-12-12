@@ -18,103 +18,70 @@ pub fn part2(contents: String) -> String {
     let mut sum = 0;
     for (points, _) in areas {
         let points: HashSet<_> = points.into_iter().collect();
-        let mut min_x = usize::MAX;
-        let mut max_x = usize::MIN;
-        let mut min_y = usize::MAX;
-        let mut max_y = usize::MIN;
-        for &(x, y) in points.iter() {
-            if x < min_x {
-                min_x = x;
-            }
-            if x > max_x {
-                max_x = x;
-            }
-            if y < min_y {
-                min_y = y;
-            }
-            if y > max_y {
-                max_y = y;
-            }
-        }
+        let (min_x, max_x, min_y, max_y) = find_bounds(&points);
         // up edges
         let mut up_edges = 0;
+        let mut down_edges = 0;
         for y in min_y..=max_y {
-            let mut has_prev = false;
+            let mut has_prev_up = false;
+            let mut has_prev_down = false;
             for x in min_x..=max_x {
                 let point = (x, y);
-
                 if !points.contains(&point) {
-                    has_prev = false;
+                    has_prev_up = false;
+                    has_prev_down = false;
                     continue;
                 }
                 // up edges
                 if (y == 0) || !points.contains(&(x, y - 1)) {
-                    if !has_prev {
+                    if !has_prev_up {
                         up_edges += 1;
-                        has_prev = true;
+                        has_prev_up = true;
                     }
                 } else {
-                    has_prev = false;
-                }
-            }
-        }
-        let mut down_edges = 0;
-        for y in min_y..=max_y {
-            let mut has_prev = false;
-            for x in min_x..=max_x {
-                let point = (x, y);
-                if !points.contains(&point) {
-                    has_prev = false;
-                    continue;
+                    has_prev_up = false;
                 }
                 // down
                 if !points.contains(&(x, y + 1)) {
-                    if !has_prev {
+                    if !has_prev_down {
                         down_edges += 1;
-                        has_prev = true;
+                        has_prev_down = true;
                     }
                 } else {
-                    has_prev = false;
+                    has_prev_down = false;
                 }
             }
         }
+
         let mut left_edges = 0;
+        let mut right_edges = 0;
         for x in min_x..=max_x {
-            let mut has_prev = false;
+            let mut has_prev_left = false;
+            let mut has_prev_right = false;
             for y in min_y..=max_y {
                 let point = (x, y);
                 if !points.contains(&point) {
-                    has_prev = false;
+                    has_prev_left = false;
+                    has_prev_right = false;
                     continue;
                 }
                 // left edges
                 if (x == 0) || !points.contains(&(x - 1, y)) {
-                    if !has_prev {
+                    if !has_prev_left {
                         left_edges += 1;
-                        has_prev = true;
+                        has_prev_left = true;
                     }
                 } else {
-                    has_prev = false;
-                }
-            }
-        }
-        let mut right_edges = 0;
-        for x in min_x..=max_x {
-            let mut has_prev = false;
-            for y in min_y..=max_y {
-                let point = (x, y);
-                if !points.contains(&point) {
-                    has_prev = false;
-                    continue;
+                    has_prev_left = false;
                 }
                 // right
                 if !points.contains(&(x + 1, y)) {
-                    if !has_prev {
+                    if !has_prev_right {
                         right_edges += 1;
-                        has_prev = true;
+                        has_prev_right = true;
                     }
                 } else {
-                    has_prev = false;
+                    has_prev_right = false;
                 }
             }
         }
@@ -122,6 +89,28 @@ pub fn part2(contents: String) -> String {
         sum += points.len() * (up_edges + down_edges + right_edges + left_edges);
     }
     sum.to_string()
+}
+
+fn find_bounds(points: &HashSet<(usize, usize)>) -> (usize, usize, usize, usize) {
+    let mut min_x = usize::MAX;
+    let mut max_x = usize::MIN;
+    let mut min_y = usize::MAX;
+    let mut max_y = usize::MIN;
+    for &(x, y) in points.iter() {
+        if x < min_x {
+            min_x = x;
+        }
+        if x > max_x {
+            max_x = x;
+        }
+        if y < min_y {
+            min_y = y;
+        }
+        if y > max_y {
+            max_y = y;
+        }
+    }
+    (min_x, max_x, min_y, max_y)
 }
 
 fn parse(contents: String) -> Vec<Vec<char>> {
