@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 
 pub fn part1(contents: String) -> String {
     let grid = parse(contents);
@@ -17,7 +17,6 @@ pub fn part2(contents: String) -> String {
     let areas = find_areas(grid);
     let mut sum = 0;
     for (points, _) in areas {
-        let points: HashSet<_> = points.into_iter().collect();
         let (min_x, max_x, min_y, max_y) = find_bounds(&points);
         // up edges
         let mut up_edges = 0;
@@ -91,7 +90,7 @@ pub fn part2(contents: String) -> String {
     sum.to_string()
 }
 
-fn find_bounds(points: &HashSet<(usize, usize)>) -> (usize, usize, usize, usize) {
+fn find_bounds(points: &FxHashSet<(usize, usize)>) -> (usize, usize, usize, usize) {
     let mut min_x = usize::MAX;
     let mut max_x = usize::MIN;
     let mut min_y = usize::MAX;
@@ -118,9 +117,12 @@ fn parse(contents: String) -> Vec<Vec<char>> {
     grid
 }
 
-fn find_areas(grid: Vec<Vec<char>>) -> Vec<(Vec<(usize, usize)>, usize)> {
-    let mut visited = HashSet::new();
+fn find_areas(grid: Vec<Vec<char>>) -> Vec<(FxHashSet<(usize, usize)>, usize)> {
+    let mut visited = FxHashSet::default();
     let mut areas = Vec::new();
+
+    let mut stack = Vec::new();
+
     for y in 0..grid.len() {
         for x in 0..grid[0].len() {
             let point = (x, y);
@@ -128,8 +130,8 @@ fn find_areas(grid: Vec<Vec<char>>) -> Vec<(Vec<(usize, usize)>, usize)> {
                 continue;
             }
             let mut perimeter = 0;
-            let mut area = Vec::new();
-            let mut stack = Vec::new();
+            let mut area = FxHashSet::default();
+            // okay to reuse stack as it is always emptied
             stack.push(point);
             while let Some(stack_point) = stack.pop() {
                 if visited.contains(&stack_point) {
@@ -138,7 +140,7 @@ fn find_areas(grid: Vec<Vec<char>>) -> Vec<(Vec<(usize, usize)>, usize)> {
                 visited.insert(stack_point);
                 let neighbours = neighbourhood(&grid, stack_point);
                 perimeter += 4 - neighbours.len();
-                area.push(stack_point);
+                area.insert(stack_point);
                 for n in neighbours {
                     if !visited.contains(&n) {
                         stack.push(n);
@@ -152,7 +154,7 @@ fn find_areas(grid: Vec<Vec<char>>) -> Vec<(Vec<(usize, usize)>, usize)> {
 }
 
 fn neighbourhood(grid: &[Vec<char>], point: (usize, usize)) -> Vec<(usize, usize)> {
-    let mut hood = Vec::new();
+    let mut hood = Vec::with_capacity(4);
     let (x, y) = point;
     let value = grid[y][x];
     if x > 0 {
