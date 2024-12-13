@@ -16,9 +16,6 @@ pub fn part1(contents: String) -> String {
         let mut solution = None;
         for a_presses in 0..100 {
             let position = (a.0 * a_presses, a.1 * a_presses);
-            // if prize.0 % b.0 != 0 || prize.1 % b.1 != 0 {
-            //     continue;
-            // }
             let b_presses = (prize.0 - position.0) / b.0;
 
             if b_presses > 100 {
@@ -26,7 +23,6 @@ pub fn part1(contents: String) -> String {
             }
             let calced = (position.0 + (b_presses * b.0), position.1 + b_presses * b.1);
 
-            // dbg!(position);
             if calced != prize {
                 continue;
             }
@@ -36,8 +32,43 @@ pub fn part1(contents: String) -> String {
         if let Some((a_presses, b_presses)) = solution {
             sum += a_presses * a_cost + b_presses * b_cost;
         }
-        // let solved = solve(&machine, (0, 0), 0, 0, 0);
-        // dbg!(solved);
+    }
+
+    sum.to_string()
+}
+
+pub fn part2(contents: String) -> String {
+    let a_cost = 3;
+    let b_cost = 1;
+    let machines = parse(contents);
+
+    let mut sum = 0;
+
+    for Input { a, b, prize } in machines.into_iter() {
+        let mult = 10000000000000;
+        let prize = (prize.0 + mult, prize.1 + mult);
+
+        // Cramer's rule
+
+        let a1 = a.0;
+        let a2 = a.1;
+
+        let b1 = b.0;
+        let b2 = b.1;
+
+        let c1 = prize.0;
+        let c2 = prize.1;
+
+        let a_presses = (c1 * b2 - b1 * c2) / (a1 * b2 - b1 * a2);
+        let position = (a.0 * a_presses, a.1 * a_presses);
+
+        let b_presses = (prize.0 - position.0) / b.0;
+
+        let calced = (position.0 + (b_presses * b.0), position.1 + b_presses * b.1);
+
+        if calced == prize {
+            sum += a_presses * a_cost + b_presses * b_cost;
+        }
     }
 
     sum.to_string()
@@ -73,10 +104,6 @@ fn parse(contents: String) -> Vec<Input> {
     input
 }
 
-pub fn part2(contents: String) -> String {
-    "example2".to_string()
-}
-
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -87,7 +114,7 @@ mod tests {
     fn test_part1() {
         assert_eq!(
             part1(fs::read_to_string("./input/13/real.txt").unwrap()),
-            "example"
+            "34393"
         );
     }
 
@@ -95,7 +122,7 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(fs::read_to_string("./input/13/real.txt").unwrap()),
-            "example2"
+            "83551068361379"
         );
     }
 }
