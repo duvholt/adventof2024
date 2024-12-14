@@ -14,19 +14,20 @@ pub fn part1(contents: String) -> String {
     let width = 101;
     let height = 103;
 
-    for _second in 0..100 {
-        move_robots(&mut robots, width, height);
-    }
+    move_robots(&mut robots, width, height, 100);
 
     let quadrants = find_quadrants(robots.iter().map(|r| r.position), height, width);
     quadrants.into_iter().product::<u64>().to_string()
 }
 
-fn move_robots(robots: &mut [Robot], width: i64, height: i64) {
+fn move_robots(robots: &mut [Robot], width: i64, height: i64, times: i64) {
     for robot in robots.iter_mut() {
         let (x, y) = robot.position;
         let (vx, vy) = robot.velocity;
-        let new_position = ((x + vx).rem_euclid(width), (y + vy).rem_euclid(height));
+        let new_position = (
+            (x + vx * times).rem_euclid(width),
+            (y + vy * times).rem_euclid(height),
+        );
         robot.position = new_position;
     }
 }
@@ -39,22 +40,22 @@ fn find_quadrants(
     let mut quadrants = [0; 4];
     for position in positions {
         let (x, y) = position;
-        if y < (height / 2) {
-            if x < (width / 2) {
-                // 1
-                quadrants[0] += 1;
-            } else if x > (width / 2) {
-                // 2
-                quadrants[1] += 1;
-            }
-        } else if y > (height / 2) {
-            if x < (width / 2) {
-                // 3
-                quadrants[2] += 1;
-            } else if x > (width / 2) {
-                // 4
-                quadrants[3] += 1;
-            }
+        let up = y < (height / 2);
+        let down = y > (height / 2);
+        let left = x < (width / 2);
+        let right = x > (width / 2);
+        if up && left {
+            // 1
+            quadrants[0] += 1;
+        } else if up && right {
+            // 2
+            quadrants[1] += 1;
+        } else if down && left {
+            // 3
+            quadrants[2] += 1;
+        } else if down && right {
+            // 4
+            quadrants[3] += 1;
         }
     }
     quadrants
@@ -69,7 +70,7 @@ pub fn part2(contents: String) -> String {
     let mut second = 0;
     loop {
         second += 1;
-        move_robots(&mut robots, width, height);
+        move_robots(&mut robots, width, height, 1);
 
         let has_christmas_tree_line = has_line(&robots, width, height, 10);
         if has_christmas_tree_line {
