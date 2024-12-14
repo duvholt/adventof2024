@@ -71,15 +71,38 @@ pub fn part2(contents: String) -> String {
         second += 1;
         move_robots(&mut robots, width, height);
 
-        let has_christmas_tree_line = print_map(second, &robots, width, height);
+        let has_christmas_tree_line = has_line(&robots, width, height, 10);
         if has_christmas_tree_line {
+            // print_map(second, &robots, width, height);
             break;
         }
     }
     second.to_string()
 }
 
-fn print_map(second: i32, robots: &[Robot], width: i64, height: i64) -> bool {
+fn has_line(robots: &[Robot], width: i64, height: i64, min_length: i32) -> bool {
+    let positions: HashSet<_> = robots.iter().map(|r| r.position).collect();
+    for y in 0..height {
+        let mut continous = 0;
+        for x in 0..width {
+            if positions.contains(&(x, y)) {
+                continous += 1;
+            } else {
+                if continous > min_length {
+                    return true;
+                }
+                continous = 0;
+            }
+        }
+        if continous > min_length {
+            return true;
+        }
+    }
+    false
+}
+
+#[allow(dead_code)]
+fn print_map(second: i32, robots: &[Robot], width: i64, height: i64) {
     let mut s = String::new();
     let positions: HashSet<_> = robots.iter().map(|r| r.position).collect();
     for y in 0..height {
@@ -92,8 +115,7 @@ fn print_map(second: i32, robots: &[Robot], width: i64, height: i64) -> bool {
         }
         s.push('\n');
     }
-    // println!("############# Second: {}\n{}", second, s);
-    s.contains("#########################")
+    println!("############# Second: {}\n{}", second, s);
 }
 
 fn parse(contents: String) -> Vec<Robot> {
