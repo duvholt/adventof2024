@@ -11,7 +11,6 @@ enum Block {
     Wall,
     Box,
     Empty,
-    Robot,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -20,7 +19,6 @@ enum Block2 {
     BoxLeft,
     BoxRight,
     Empty,
-    Robot,
 }
 
 type Position = (usize, usize);
@@ -29,26 +27,21 @@ pub fn part1(contents: String) -> String {
     let (mut map_grid, moves, mut robot_position) = parse(contents);
 
     for robot_move in moves {
-        let (robot_x, robot_y) = robot_position;
         let (new_x, new_y) = next_position(&robot_move, robot_position);
         match map_grid[new_y][new_x] {
             Block::Wall => (),
             Block::Box => {
                 let moved =
-                    part1::move_boxes(&robot_move, (new_x, new_y), Block::Robot, &mut map_grid);
+                    part1::move_boxes(&robot_move, (new_x, new_y), Block::Empty, &mut map_grid);
                 if moved {
-                    map_grid[robot_y][robot_x] = Block::Empty;
                     robot_position = (new_x, new_y);
                 }
             }
             Block::Empty => {
-                map_grid[new_y][new_x] = Block::Robot;
-                map_grid[robot_y][robot_x] = Block::Empty;
                 robot_position = (new_x, new_y);
             }
-            Block::Robot => unreachable!("robot moved into robot"),
         }
-        // part1::print_map(&map_grid, &robot_move);
+        // part1::print_map(&map_grid, robot_position, &robot_move);
     }
     let sum = part1::sum_boxes(map_grid);
 
@@ -62,7 +55,6 @@ pub fn part2(contents: String) -> String {
     let mut robot_position = (robot_position.0 * 2, robot_position.1);
 
     for robot_move in moves {
-        let (robot_x, robot_y) = robot_position;
         let (new_x, new_y) = next_position(&robot_move, robot_position);
         match map_grid[new_y][new_x] {
             Block2::Wall => (),
@@ -72,19 +64,15 @@ pub fn part2(contents: String) -> String {
 
                 if !boxes_to_from.is_empty() {
                     part2::move_boxes(boxes_to_from, &robot_move, &mut map_grid);
-                    map_grid[robot_y][robot_x] = Block2::Empty;
-                    map_grid[new_y][new_x] = Block2::Robot;
+                    map_grid[new_y][new_x] = Block2::Empty;
                     robot_position = (new_x, new_y);
                 }
             }
             Block2::Empty => {
-                map_grid[new_y][new_x] = Block2::Robot;
-                map_grid[robot_y][robot_x] = Block2::Empty;
                 robot_position = (new_x, new_y);
             }
-            Block2::Robot => unreachable!("robot moved into robot"),
         }
-        // part2::print_map(&map_grid, &robot_move);
+        // part2::print_map(&map_grid, robot_position, &robot_move);
     }
     let sum = part2::sum_boxes(map_grid);
 
@@ -92,7 +80,7 @@ pub fn part2(contents: String) -> String {
 }
 
 mod part1 {
-    use super::{Block, Direction};
+    use super::{Block, Direction, Position};
     use crate::day15::next_position;
 
     pub fn move_boxes(
@@ -106,7 +94,6 @@ mod part1 {
             Block::Wall => false,
             Block::Box => move_boxes(robot_move, new_box_position, Block::Box, map_grid),
             Block::Empty => true,
-            Block::Robot => unreachable!("robot into box into robot?"),
         };
         if moved {
             map_grid[new_box_position.1][new_box_position.0] = Block::Box;
@@ -128,7 +115,7 @@ mod part1 {
     }
 
     #[allow(dead_code)]
-    pub fn print_map(map_grid: &[Vec<Block>], robot_move: &Direction) {
+    pub fn print_map(map_grid: &[Vec<Block>], robot_position: Position, robot_move: &Direction) {
         println!("Direction: {:#?}", robot_move);
         let mut s = String::new();
         for y in 0..map_grid.len() {
@@ -136,8 +123,13 @@ mod part1 {
                 let letter = match map_grid[y][x] {
                     Block::Wall => '#',
                     Block::Box => 'O',
-                    Block::Empty => '.',
-                    Block::Robot => '@',
+                    Block::Empty => {
+                        if (x, y) == robot_position {
+                            '@'
+                        } else {
+                            '.'
+                        }
+                    }
                 };
                 s.push(letter);
             }
@@ -170,10 +162,6 @@ mod part2 {
                     }
                     Block::Empty => {
                         new_line.push(Block2::Empty);
-                        new_line.push(Block2::Empty);
-                    }
-                    Block::Robot => {
-                        new_line.push(Block2::Robot);
                         new_line.push(Block2::Empty);
                     }
                 }
@@ -226,7 +214,6 @@ mod part2 {
                     boxes_to_from.push((block, new_box_position, Block2::BoxRight));
                 }
                 Block2::Empty => {}
-                Block2::Robot => unreachable!("wtf how"),
             };
         }
         if can_move {
@@ -276,7 +263,7 @@ mod part2 {
     }
 
     #[allow(dead_code)]
-    pub fn print_map(map_grid: &[Vec<Block2>], robot_move: &Direction) {
+    pub fn print_map(map_grid: &[Vec<Block2>], robot_position: Position, robot_move: &Direction) {
         println!("Direction: {:#?}", robot_move);
         let mut s = String::new();
         for y in 0..map_grid.len() {
@@ -285,8 +272,13 @@ mod part2 {
                     Block2::Wall => '#',
                     Block2::BoxLeft => '[',
                     Block2::BoxRight => ']',
-                    Block2::Empty => '.',
-                    Block2::Robot => '@',
+                    Block2::Empty => {
+                        if (x, y) == robot_position {
+                            '@'
+                        } else {
+                            '.'
+                        }
+                    }
                 };
                 s.push(letter);
             }
@@ -321,7 +313,7 @@ fn parse(contents: String) -> (Vec<Vec<Block>>, Vec<Direction>, Position) {
                 '.' => Block::Empty,
                 '@' => {
                     robot_position = (x, y);
-                    Block::Robot
+                    Block::Empty
                 }
                 'O' => Block::Box,
                 _ => panic!("Unknown block"),
