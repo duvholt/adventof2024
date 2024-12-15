@@ -6,6 +6,7 @@ pub mod day11;
 pub mod day12;
 pub mod day13;
 pub mod day14;
+pub mod day15;
 pub mod day2;
 pub mod day3;
 pub mod day4;
@@ -22,6 +23,8 @@ pub fn day_tasks() -> HashMap<&'static str, Task> {
     let mut map: HashMap<&str, Task> = HashMap::new();
     map.insert("example-1", example::part1);
     map.insert("example-2", example::part2);
+    map.insert("15-1", day15::part1);
+    map.insert("15-2", day15::part2);
     map.insert("14-1", day14::part1);
     map.insert("14-2", day14::part2);
     map.insert("13-1", day13::part1);
