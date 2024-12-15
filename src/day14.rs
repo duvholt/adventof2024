@@ -82,7 +82,7 @@ pub fn part2(contents: String) -> String {
 }
 
 fn has_line(robots: &[Robot], width: i64, height: i64, min_length: i32) -> bool {
-    let positions: HashSet<_> = robots.iter().map(|r| r.position).collect();
+    let positions: rustc_hash::FxHashSet<_> = robots.iter().map(|r| r.position).collect();
     for y in 0..height {
         let mut continous = 0;
         for x in 0..width {

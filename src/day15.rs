@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 #[derive(PartialEq, Debug, Clone)]
 enum Block {
     Wall,
@@ -17,16 +19,7 @@ enum Direction {
 pub fn part1(contents: String) -> String {
     let (mut map_grid, moves) = parse(contents);
 
-    let mut robot_position = (0, 0);
-
-    for y in 0..map_grid.len() {
-        for x in 0..map_grid[0].len() {
-            if map_grid[y][x] == Block::Robot {
-                robot_position = (x, y);
-                break;
-            }
-        }
-    }
+    let mut robot_position = find_start_position(&map_grid);
 
     for robot_move in moves {
         let (robot_x, robot_y) = robot_position;
@@ -50,6 +43,12 @@ pub fn part1(contents: String) -> String {
         }
         // print_map(&map_grid, &robot_move);
     }
+    let sum = sum_boxes(map_grid);
+
+    sum.to_string()
+}
+
+fn sum_boxes(map_grid: Vec<Vec<Block>>) -> usize {
     let mut sum = 0;
     for y in 0..map_grid.len() {
         for x in 0..map_grid[y].len() {
@@ -58,8 +57,191 @@ pub fn part1(contents: String) -> String {
             }
         }
     }
+    sum
+}
+
+fn sum_boxes2(map_grid: Vec<Vec<Block2>>) -> usize {
+    let mut sum = 0;
+    for y in 0..map_grid.len() {
+        for x in 0..map_grid[y].len() {
+            if map_grid[y][x] == Block2::BoxLeft {
+                sum += 100 * y + x;
+            }
+        }
+    }
+    sum
+}
+
+#[derive(PartialEq, Debug, Clone)]
+enum Block2 {
+    Wall,
+    BoxLeft,
+    BoxRight,
+    Empty,
+    Robot,
+}
+
+pub fn part2(contents: String) -> String {
+    let (map_grid, moves) = parse(contents);
+
+    let mut map_grid = expand_map(map_grid);
+
+    let mut robot_position = find_start_position2(&map_grid);
+
+    for robot_move in moves {
+        let (robot_x, robot_y) = robot_position;
+        let (new_x, new_y) = next_position(&robot_move, robot_position);
+        match map_grid[new_y][new_x] {
+            Block2::Wall => (),
+            Block2::BoxLeft | Block2::BoxRight => {
+                let stack = vec![(new_x, new_y)];
+                let (mut boxes_to_from, can_move) = find_boxes(stack, &map_grid, &robot_move);
+
+                if can_move {
+                    let boxes_to_move: HashSet<_> = boxes_to_from
+                        .iter()
+                        .map(|(from, _, _)| from)
+                        .cloned()
+                        .collect();
+                    while let Some((from, to, block_type)) = boxes_to_from.pop() {
+                        if robot_move == Direction::Up || robot_move == Direction::Down {
+                            let opposite_direction = match robot_move {
+                                Direction::Up => Direction::Down,
+                                Direction::Right => Direction::Left,
+                                Direction::Down => Direction::Up,
+                                Direction::Left => Direction::Right,
+                            };
+                            let (prev_x, prev_y) = next_position(&opposite_direction, from);
+
+                            if !boxes_to_move.contains(&(prev_x, prev_y)) {
+                                map_grid[from.1][from.0] = Block2::Empty;
+                            }
+                        }
+                        map_grid[to.1][to.0] = block_type;
+                    }
+                    map_grid[robot_y][robot_x] = Block2::Empty;
+                    map_grid[new_y][new_x] = Block2::Robot;
+                    robot_position = (new_x, new_y);
+                }
+            }
+            Block2::Empty => {
+                // move robot
+                map_grid[new_y][new_x] = Block2::Robot;
+                map_grid[robot_y][robot_x] = Block2::Empty;
+                robot_position = (new_x, new_y);
+            }
+            Block2::Robot => unreachable!("robot moved into robot"),
+        }
+        print_map2(&map_grid, &robot_move);
+    }
+    let sum = sum_boxes2(map_grid);
 
     sum.to_string()
+}
+
+fn find_boxes(
+    mut stack: Vec<(usize, usize)>,
+    map_grid: &Vec<Vec<Block2>>,
+    robot_move: &Direction,
+) -> (Vec<((usize, usize), (usize, usize), Block2)>, bool) {
+    let mut visited = HashSet::new();
+    let mut boxes_to_from = Vec::new();
+    let mut can_move = true;
+    while let Some(block) = stack.pop() {
+        if visited.contains(&block) {
+            continue;
+        }
+        let block_type = map_grid[block.1][block.0].clone();
+        visited.insert(block);
+        match block_type {
+            Block2::Wall => {
+                can_move = false;
+                break;
+            }
+            Block2::BoxLeft => {
+                let new_box_position = next_position(robot_move, block);
+                // next in queue
+                stack.push(new_box_position);
+
+                let right_box = (block.0 + 1, block.1);
+
+                stack.push(right_box);
+
+                boxes_to_from.push((block, new_box_position, Block2::BoxLeft));
+            }
+            Block2::BoxRight => {
+                let new_box_position = next_position(robot_move, block);
+                // next in queue
+                stack.push(new_box_position);
+
+                let left_box = (block.0 - 1, block.1);
+
+                stack.push(left_box);
+
+                boxes_to_from.push((block, new_box_position, Block2::BoxRight));
+            }
+            Block2::Empty => {}
+            Block2::Robot => unreachable!("wtf how"),
+        };
+    }
+    (boxes_to_from, can_move)
+}
+
+fn expand_map(map_grid: Vec<Vec<Block>>) -> Vec<Vec<Block2>> {
+    let mut new = Vec::new();
+    for line in map_grid {
+        let mut new_line = Vec::new();
+        for l in line {
+            match l {
+                Block::Wall => {
+                    new_line.push(Block2::Wall);
+                    new_line.push(Block2::Wall);
+                }
+                Block::Box => {
+                    new_line.push(Block2::BoxLeft);
+                    new_line.push(Block2::BoxRight);
+                }
+                Block::Empty => {
+                    new_line.push(Block2::Empty);
+                    new_line.push(Block2::Empty);
+                }
+                Block::Robot => {
+                    new_line.push(Block2::Robot);
+                    new_line.push(Block2::Empty);
+                }
+            }
+        }
+        new.push(new_line);
+    }
+    new
+}
+
+fn find_start_position(map_grid: &[Vec<Block>]) -> (usize, usize) {
+    let mut robot_position = (0, 0);
+
+    for y in 0..map_grid.len() {
+        for x in 0..map_grid[0].len() {
+            if map_grid[y][x] == Block::Robot {
+                robot_position = (x, y);
+                break;
+            }
+        }
+    }
+    robot_position
+}
+
+fn find_start_position2(map_grid: &[Vec<Block2>]) -> (usize, usize) {
+    let mut robot_position = (0, 0);
+
+    for y in 0..map_grid.len() {
+        for x in 0..map_grid[0].len() {
+            if map_grid[y][x] == Block2::Robot {
+                robot_position = (x, y);
+                break;
+            }
+        }
+    }
+    robot_position
 }
 
 fn move_boxes(
@@ -144,8 +326,24 @@ fn print_map(map_grid: &[Vec<Block>], robot_move: &Direction) {
     println!("{}", s);
 }
 
-pub fn part2(_contents: String) -> String {
-    "example2".to_string()
+#[allow(dead_code)]
+fn print_map2(map_grid: &[Vec<Block2>], robot_move: &Direction) {
+    println!("Direction: {:#?}", robot_move);
+    let mut s = String::new();
+    for y in 0..map_grid.len() {
+        for x in 0..map_grid[0].len() {
+            let letter = match map_grid[y][x] {
+                Block2::Wall => '#',
+                Block2::BoxLeft => '[',
+                Block2::BoxRight => ']',
+                Block2::Empty => '.',
+                Block2::Robot => '@',
+            };
+            s.push(letter);
+        }
+        s.push('\n');
+    }
+    println!("{}", s);
 }
 
 #[cfg(test)]
@@ -158,7 +356,7 @@ mod tests {
     fn test_part1() {
         assert_eq!(
             part1(fs::read_to_string("./input/15/real.txt").unwrap()),
-            "example"
+            "1457740"
         );
     }
 
@@ -166,7 +364,7 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(fs::read_to_string("./input/15/real.txt").unwrap()),
-            "example2"
+            "1467145"
         );
     }
 }
