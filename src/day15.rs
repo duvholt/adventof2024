@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 #[derive(PartialEq, Debug, Clone)]
 enum Direction {
     Up,
@@ -167,8 +165,9 @@ mod part1 {
 }
 
 mod part2 {
+    use rustc_hash::FxHashSet;
+
     use crate::day15::next_position;
-    use std::collections::HashSet;
 
     use super::{Block, Block2, Direction, Position};
 
@@ -221,7 +220,7 @@ mod part2 {
         robot_move: &Direction,
     ) -> Vec<(Position, Position, Block2)> {
         let mut stack = vec![start_box];
-        let mut visited = HashSet::new();
+        let mut visited = FxHashSet::default();
         let mut boxes_to_from = Vec::new();
         let mut can_move = true;
         while let Some(block) = stack.pop() {
@@ -273,7 +272,7 @@ mod part2 {
         robot_move: &Direction,
         map_grid: &mut [Vec<Block2>],
     ) {
-        let boxes_to_move: HashSet<_> = boxes_to_from
+        let boxes_to_move: FxHashSet<_> = boxes_to_from
             .iter()
             .map(|(from, _, _)| from)
             .cloned()
