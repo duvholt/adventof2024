@@ -26,9 +26,7 @@ enum Block2 {
 type Position = (usize, usize);
 
 pub fn part1(contents: String) -> String {
-    let (mut map_grid, moves) = parse(contents);
-
-    let mut robot_position = part1::find_start_position(&map_grid);
+    let (mut map_grid, moves, mut robot_position) = parse(contents);
 
     for robot_move in moves {
         let (robot_x, robot_y) = robot_position;
@@ -58,11 +56,10 @@ pub fn part1(contents: String) -> String {
 }
 
 pub fn part2(contents: String) -> String {
-    let (map_grid, moves) = parse(contents);
+    let (map_grid, moves, robot_position) = parse(contents);
 
     let mut map_grid = part2::expand_map(map_grid);
-
-    let mut robot_position = part2::find_start_position(&map_grid);
+    let mut robot_position = (robot_position.0 * 2, robot_position.1);
 
     for robot_move in moves {
         let (robot_x, robot_y) = robot_position;
@@ -97,20 +94,6 @@ pub fn part2(contents: String) -> String {
 mod part1 {
     use super::{Block, Direction};
     use crate::day15::next_position;
-
-    pub fn find_start_position(map_grid: &[Vec<Block>]) -> (usize, usize) {
-        let mut robot_position = (0, 0);
-
-        for y in 0..map_grid.len() {
-            for x in 0..map_grid[0].len() {
-                if map_grid[y][x] == Block::Robot {
-                    robot_position = (x, y);
-                    break;
-                }
-            }
-        }
-        robot_position
-    }
 
     pub fn move_boxes(
         robot_move: &Direction,
@@ -198,20 +181,6 @@ mod part2 {
             new.push(new_line);
         }
         new
-    }
-
-    pub fn find_start_position(map_grid: &[Vec<Block2>]) -> (usize, usize) {
-        let mut robot_position = (0, 0);
-
-        for y in 0..map_grid.len() {
-            for x in 0..map_grid[0].len() {
-                if map_grid[y][x] == Block2::Robot {
-                    robot_position = (x, y);
-                    break;
-                }
-            }
-        }
-        robot_position
     }
 
     pub fn find_boxes_to_move(
@@ -337,18 +306,23 @@ fn next_position(robot_move: &Direction, position: (usize, usize)) -> (usize, us
     (new_x, new_y)
 }
 
-fn parse(contents: String) -> (Vec<Vec<Block>>, Vec<Direction>) {
+fn parse(contents: String) -> (Vec<Vec<Block>>, Vec<Direction>, Position) {
     let mut parts = contents.split("\n\n");
     let map_part = parts.next().unwrap();
     let moves_part = parts.next().unwrap();
     let mut map_grid = Vec::new();
-    for line in map_part.lines() {
+    let mut robot_position = (0, 0);
+    for (y, line) in map_part.lines().enumerate() {
         let map_line: Vec<_> = line
             .chars()
-            .map(|c| match c {
+            .enumerate()
+            .map(|(x, c)| match c {
                 '#' => Block::Wall,
                 '.' => Block::Empty,
-                '@' => Block::Robot,
+                '@' => {
+                    robot_position = (x, y);
+                    Block::Robot
+                }
                 'O' => Block::Box,
                 _ => panic!("Unknown block"),
             })
@@ -367,7 +341,7 @@ fn parse(contents: String) -> (Vec<Vec<Block>>, Vec<Direction>) {
             d => panic!("Unknown direction: {}", d),
         })
         .collect();
-    (map_grid, moves)
+    (map_grid, moves, robot_position)
 }
 
 #[cfg(test)]
