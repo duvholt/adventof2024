@@ -52,7 +52,7 @@ pub fn part1(contents: String) -> String {
             }
             Block::Robot => unreachable!("robot moved into robot"),
         }
-        // Part1::print_map(&map_grid, &robot_move);
+        // part1::print_map(&map_grid, &robot_move);
     }
     let sum = part1::sum_boxes(map_grid);
 
@@ -89,7 +89,7 @@ pub fn part2(contents: String) -> String {
             }
             Block2::Robot => unreachable!("robot moved into robot"),
         }
-        part2::print_map(&map_grid, &robot_move);
+        // part2::print_map(&map_grid, &robot_move);
     }
     let sum = part2::sum_boxes(map_grid);
 
