@@ -95,25 +95,24 @@ pub fn part2(contents: String) -> String {
             Block2::Wall => (),
             Block2::BoxLeft | Block2::BoxRight => {
                 let stack = vec![(new_x, new_y)];
-                let (mut boxes_to_from, can_move) = find_boxes(stack, &map_grid, &robot_move);
+                let boxes_to_from = find_boxes_to_move(stack, &map_grid, &robot_move);
 
-                if can_move {
+                if !boxes_to_from.is_empty() {
                     let boxes_to_move: HashSet<_> = boxes_to_from
                         .iter()
                         .map(|(from, _, _)| from)
                         .cloned()
                         .collect();
-                    while let Some((from, to, block_type)) = boxes_to_from.pop() {
+                    for (from, to, block_type) in boxes_to_from {
+                        // if box is outside of boxes to move we need to empty the old position
                         if robot_move == Direction::Up || robot_move == Direction::Down {
-                            let opposite_direction = match robot_move {
-                                Direction::Up => Direction::Down,
-                                Direction::Right => Direction::Left,
-                                Direction::Down => Direction::Up,
-                                Direction::Left => Direction::Right,
+                            let opposite_direction = if robot_move == Direction::Up {
+                                Direction::Down
+                            } else {
+                                Direction::Up
                             };
-                            let (prev_x, prev_y) = next_position(&opposite_direction, from);
-
-                            if !boxes_to_move.contains(&(prev_x, prev_y)) {
+                            let opposite_position = next_position(&opposite_direction, from);
+                            if !boxes_to_move.contains(&opposite_position) {
                                 map_grid[from.1][from.0] = Block2::Empty;
                             }
                         }
@@ -132,18 +131,20 @@ pub fn part2(contents: String) -> String {
             }
             Block2::Robot => unreachable!("robot moved into robot"),
         }
-        print_map2(&map_grid, &robot_move);
+        // print_map2(&map_grid, &robot_move);
     }
     let sum = sum_boxes2(map_grid);
 
     sum.to_string()
 }
 
-fn find_boxes(
-    mut stack: Vec<(usize, usize)>,
-    map_grid: &Vec<Vec<Block2>>,
+type Position = (usize, usize);
+
+fn find_boxes_to_move(
+    mut stack: Vec<Position>,
+    map_grid: &[Vec<Block2>],
     robot_move: &Direction,
-) -> (Vec<((usize, usize), (usize, usize), Block2)>, bool) {
+) -> Vec<(Position, Position, Block2)> {
     let mut visited = HashSet::new();
     let mut boxes_to_from = Vec::new();
     let mut can_move = true;
@@ -184,7 +185,11 @@ fn find_boxes(
             Block2::Robot => unreachable!("wtf how"),
         };
     }
-    (boxes_to_from, can_move)
+    if can_move {
+        boxes_to_from
+    } else {
+        Vec::new()
+    }
 }
 
 fn expand_map(map_grid: Vec<Vec<Block>>) -> Vec<Vec<Block2>> {
