@@ -36,9 +36,9 @@ pub fn part2(contents: String) -> String {
     let node = find_path(start, end, direction, &map_grid);
 
     let goals = node.2.into_iter().collect();
-    find_all_paths(start, goals, direction, map_grid);
+    let all = find_all_paths(start, goals, direction, map_grid);
 
-    node.3.to_string()
+    all.to_string()
 }
 
 fn find_path(
@@ -94,59 +94,40 @@ fn find_all_paths(
     goals: FxHashSet<(Position, u64)>,
     direction: Direction,
     map_grid: Vec<Vec<bool>>,
-) -> Node {
+) -> usize {
     let node = Node(start, direction, vec![(start, 0)], 0);
     let mut frontier = BinaryHeap::new();
     frontier.push(node);
-    let mut expanded = HashSet::new();
+    let mut expanded = FxHashMap::default();
 
     let mut best_path = FxHashSet::default();
 
     while let Some(node) = frontier.pop() {
-        let Node(position, _, path, _) = node.clone();
-        if expanded.contains(&(node.0, node.1)) {
-            continue;
+        if goals.contains(&(node.0, node.3)) {
+            for (p, _) in &node.2 {
+                best_path.insert(*p);
+            }
+        }
+        if let Some(cost) = expanded.get(&(node.0, node.1)) {
+            if *cost < node.3 {
+                continue;
+            }
         }
         let neighbours = neighbourhood(&map_grid, &node);
-        let mut hash_frontier: FxHashMap<_, _> = frontier
-            .into_iter()
-            .map(|f| ((f.0, f.1), (f.2, f.3)))
-            .collect();
         for neighbour in neighbours {
-            if goals.contains(&(neighbour.0, neighbour.3)) {
-                for (p, _) in &neighbour.2 {
-                    best_path.insert(*p);
-                }
-                dbg!(best_path.len(), goals.len());
-                let frontier_map: HashSet<_> = hash_frontier.keys().map(|(p, _)| p).collect();
-                print_map_path(&map_grid, &frontier_map, &best_path, direction);
-            }
-            let entry = hash_frontier.entry((neighbour.0, neighbour.1));
-            match entry {
-                Entry::Occupied(mut entry) => {
-                    let val = entry.get_mut();
-                    if val.1 > neighbour.3 {
-                        *val = (neighbour.2, neighbour.3);
-                    }
-                }
-                Entry::Vacant(entry) => {
-                    entry.insert((neighbour.2, neighbour.3));
-                }
-            }
+            frontier.push(neighbour);
         }
-        frontier = hash_frontier
-            .into_iter()
-            .map(|(k, v)| Node(k.0, k.1, v.0, v.1))
-            .collect();
-        expanded.insert((node.0, node.1));
-        // print_map(&map_grid, position, direction);
+        expanded.insert((node.0, node.1), node.3);
     }
-    panic!("Unable to find path")
+
+    best_path.len()
 }
 
+#[allow(unused)]
 fn print_map_path(
     map_grid: &[Vec<bool>],
-    frontier: &HashSet<&(usize, usize)>,
+    node_path: &HashSet<&(usize, usize)>,
+    frontier: &HashSet<(usize, usize)>,
     best_path: &HashSet<(usize, usize), rustc_hash::FxBuildHasher>,
     direction: Direction,
 ) {
@@ -157,7 +138,9 @@ fn print_map_path(
             let letter = match map_grid[y][x] {
                 true => '#',
                 false => {
-                    if best_path.contains(&(x, y)) {
+                    if node_path.contains(&(x, y)) {
+                        '$'
+                    } else if best_path.contains(&(x, y)) {
                         'O'
                     } else if frontier.contains(&(x, y)) {
                         '?'
@@ -281,7 +264,7 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(fs::read_to_string("./input/16/real.txt").unwrap()),
-            "example2"
+            "543"
         );
     }
 }
