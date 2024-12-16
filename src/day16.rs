@@ -1,9 +1,12 @@
-use std::collections::{hash_map::Entry, BinaryHeap, HashSet};
+use std::{
+    collections::{hash_map::Entry, BinaryHeap, HashSet},
+    hash::Hash,
+};
 
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-struct Node(Position, Direction, Vec<Position>, u64);
+struct Node(Position, Direction, Vec<(Position, u64)>, u64);
 
 impl PartialOrd for Node {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -21,7 +24,19 @@ pub fn part1(contents: String) -> String {
     let (map_grid, start, end) = parse(contents);
     let direction = Direction::Right;
 
-    let node = find_path(start, end, direction, map_grid);
+    let node = find_path(start, end, direction, &map_grid);
+
+    node.3.to_string()
+}
+
+pub fn part2(contents: String) -> String {
+    let (map_grid, start, end) = parse(contents);
+    let direction = Direction::Right;
+
+    let node = find_path(start, end, direction, &map_grid);
+
+    let goals = node.2.into_iter().collect();
+    find_all_paths(start, goals, direction, map_grid);
 
     node.3.to_string()
 }
@@ -30,9 +45,9 @@ fn find_path(
     start: (usize, usize),
     end: (usize, usize),
     direction: Direction,
-    map_grid: Vec<Vec<bool>>,
+    map_grid: &Vec<Vec<bool>>,
 ) -> Node {
-    let node = Node(start, direction, vec![start], 0);
+    let node = Node(start, direction, vec![(start, 0)], 0);
     let mut frontier = BinaryHeap::new();
     frontier.push(node);
     let mut expanded = HashSet::new();
@@ -74,6 +89,90 @@ fn find_path(
     panic!("Unable to find path")
 }
 
+fn find_all_paths(
+    start: (usize, usize),
+    goals: FxHashSet<(Position, u64)>,
+    direction: Direction,
+    map_grid: Vec<Vec<bool>>,
+) -> Node {
+    let node = Node(start, direction, vec![(start, 0)], 0);
+    let mut frontier = BinaryHeap::new();
+    frontier.push(node);
+    let mut expanded = HashSet::new();
+
+    let mut best_path = FxHashSet::default();
+
+    while let Some(node) = frontier.pop() {
+        let Node(position, _, path, _) = node.clone();
+        if expanded.contains(&(node.0, node.1)) {
+            continue;
+        }
+        let neighbours = neighbourhood(&map_grid, &node);
+        let mut hash_frontier: FxHashMap<_, _> = frontier
+            .into_iter()
+            .map(|f| ((f.0, f.1), (f.2, f.3)))
+            .collect();
+        for neighbour in neighbours {
+            if goals.contains(&(neighbour.0, neighbour.3)) {
+                for (p, _) in &neighbour.2 {
+                    best_path.insert(*p);
+                }
+                dbg!(best_path.len(), goals.len());
+                let frontier_map: HashSet<_> = hash_frontier.keys().map(|(p, _)| p).collect();
+                print_map_path(&map_grid, &frontier_map, &best_path, direction);
+            }
+            let entry = hash_frontier.entry((neighbour.0, neighbour.1));
+            match entry {
+                Entry::Occupied(mut entry) => {
+                    let val = entry.get_mut();
+                    if val.1 > neighbour.3 {
+                        *val = (neighbour.2, neighbour.3);
+                    }
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert((neighbour.2, neighbour.3));
+                }
+            }
+        }
+        frontier = hash_frontier
+            .into_iter()
+            .map(|(k, v)| Node(k.0, k.1, v.0, v.1))
+            .collect();
+        expanded.insert((node.0, node.1));
+        // print_map(&map_grid, position, direction);
+    }
+    panic!("Unable to find path")
+}
+
+fn print_map_path(
+    map_grid: &[Vec<bool>],
+    frontier: &HashSet<&(usize, usize)>,
+    best_path: &HashSet<(usize, usize), rustc_hash::FxBuildHasher>,
+    direction: Direction,
+) {
+    println!("Direction: {:#?}", direction);
+    let mut s = String::new();
+    for y in 0..map_grid.len() {
+        for x in 0..map_grid[0].len() {
+            let letter = match map_grid[y][x] {
+                true => '#',
+                false => {
+                    if best_path.contains(&(x, y)) {
+                        'O'
+                    } else if frontier.contains(&(x, y)) {
+                        '?'
+                    } else {
+                        '.'
+                    }
+                }
+            };
+            s.push(letter);
+        }
+        s.push('\n');
+    }
+    println!("{}", s);
+}
+
 fn neighbourhood(map_grid: &[Vec<bool>], node: &Node) -> Vec<Node> {
     let mut new = Vec::new();
     let new_directions = match node.1 {
@@ -83,10 +182,11 @@ fn neighbourhood(map_grid: &[Vec<bool>], node: &Node) -> Vec<Node> {
     for new_direction in [new_directions.0, new_directions.1] {
         new.push(Node(node.0, new_direction, node.2.clone(), node.3 + 1000));
     }
-    let new_position = next_position(&node);
+    let new_position = next_position(node);
     if !map_grid[new_position.1][new_position.0] {
-        let path = node.2.clone();
-        new.push(Node(new_position, node.1.clone(), path, node.3 + 1));
+        let mut path = node.2.clone();
+        path.push((new_position, node.3 + 1));
+        new.push(Node(new_position, node.1, path, node.3 + 1));
     }
 
     new
@@ -101,10 +201,6 @@ fn next_position(node: &Node) -> (usize, usize) {
         Direction::Left => (position.0 - 1, position.1),
     };
     (new_x, new_y)
-}
-
-pub fn part2(_contents: String) -> String {
-    "example2".to_string()
 }
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash, PartialOrd, Ord)]
