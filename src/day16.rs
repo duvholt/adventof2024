@@ -3,17 +3,17 @@ use std::collections::{hash_map::Entry, BinaryHeap, HashSet};
 use rustc_hash::FxHashMap;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-struct Node(Position, Direction, u64);
+struct Node(Position, Direction, Vec<Position>, u64);
 
 impl PartialOrd for Node {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        other.2.partial_cmp(&self.2)
+        other.3.partial_cmp(&self.3)
     }
 }
 
 impl Ord for Node {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.2.cmp(&self.2)
+        other.3.cmp(&self.3)
     }
 }
 
@@ -21,47 +21,57 @@ pub fn part1(contents: String) -> String {
     let (map_grid, start, end) = parse(contents);
     let direction = Direction::Right;
 
-    let mut node = Node(start, direction.clone(), 0);
+    let node = find_path(start, end, direction, map_grid);
+
+    node.3.to_string()
+}
+
+fn find_path(
+    start: (usize, usize),
+    end: (usize, usize),
+    direction: Direction,
+    map_grid: Vec<Vec<bool>>,
+) -> Node {
+    let node = Node(start, direction, vec![start], 0);
     let mut frontier = BinaryHeap::new();
     frontier.push(node);
     let mut expanded = HashSet::new();
 
     while let Some(node) = frontier.pop() {
-        dbg!(&node);
-        let Node(position, direction, cost) = node.clone();
+        let Node(position, _, path, _) = node.clone();
         if position == end {
             // won
-            dbg!(&node);
-            break;
+            return node;
         }
         let neighbours = neighbourhood(&map_grid, &node);
-        let mut hash_frontier: FxHashMap<_, _> =
-            frontier.into_iter().map(|f| ((f.0, f.1), f.2)).collect();
+        let mut hash_frontier: FxHashMap<_, _> = frontier
+            .into_iter()
+            .map(|f| ((f.0, f.1), (f.2, f.3)))
+            .collect();
         for neighbour in neighbours {
             if !expanded.contains(&(neighbour.0, neighbour.1)) {
                 let entry = hash_frontier.entry((neighbour.0, neighbour.1));
                 match entry {
                     Entry::Occupied(mut entry) => {
                         let val = entry.get_mut();
-                        if *val > neighbour.2 {
-                            *val = neighbour.2;
+                        if val.1 > neighbour.3 {
+                            *val = (neighbour.2, neighbour.3);
                         }
                     }
                     Entry::Vacant(entry) => {
-                        entry.insert(neighbour.2);
+                        entry.insert((neighbour.2, neighbour.3));
                     }
                 }
             }
         }
         frontier = hash_frontier
             .into_iter()
-            .map(|(k, v)| Node(k.0, k.1, v))
+            .map(|(k, v)| Node(k.0, k.1, v.0, v.1))
             .collect();
         expanded.insert((node.0, node.1));
         // print_map(&map_grid, position, direction);
     }
-
-    todo!()
+    panic!("Unable to find path")
 }
 
 fn neighbourhood(map_grid: &[Vec<bool>], node: &Node) -> Vec<Node> {
@@ -71,11 +81,12 @@ fn neighbourhood(map_grid: &[Vec<bool>], node: &Node) -> Vec<Node> {
         Direction::Right | Direction::Left => (Direction::Up, Direction::Down),
     };
     for new_direction in [new_directions.0, new_directions.1] {
-        new.push(Node(node.0, new_direction, node.2 + 1000));
+        new.push(Node(node.0, new_direction, node.2.clone(), node.3 + 1000));
     }
     let new_position = next_position(&node);
     if !map_grid[new_position.1][new_position.0] {
-        new.push(Node(new_position, node.1.clone(), node.2 + 1));
+        let path = node.2.clone();
+        new.push(Node(new_position, node.1.clone(), path, node.3 + 1));
     }
 
     new
@@ -166,7 +177,7 @@ mod tests {
     fn test_part1() {
         assert_eq!(
             part1(fs::read_to_string("./input/16/real.txt").unwrap()),
-            "example"
+            "101492"
         );
     }
 
