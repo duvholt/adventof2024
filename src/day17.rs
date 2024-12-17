@@ -1,15 +1,62 @@
 pub fn part1(contents: String) -> String {
     let (instructions, (mut register_a, mut register_b, mut register_c)) = parse(contents);
 
+    let outputs = run_computer(&instructions, register_a, register_b, register_c);
+
+    let a: Vec<_> = outputs.into_iter().map(|c| c.to_string()).collect();
+    a.join(",")
+}
+
+pub fn part2(contents: String) -> String {
+    let (instructions, (_register_a, register_b, register_c)) = parse(contents);
+
+    let mut a = 17;
+    // let mut i = 0;
+    loop {
+        let output = run_computer2(&instructions, a, register_b, register_c);
+        if output {
+            break;
+        }
+        // 1: 15 or 1
+        // 2: 17, 145, 273 ???
+
+        // if output.len() > 2 && output[0..3] == instructions[0..3] {
+        //     dbg!("first", a, a.rem_euclid(32));
+        // }
+        // if a > 10000 {
+        //     break;
+        // }
+        if a % 10000000 == 0 {
+            dbg!(a);
+        }
+        // a += 128;
+        a += 1;
+        // if i % 2 == 0 {
+        //     a += 1;
+        // } else {
+        //     a += 15;
+        // }
+        // i += 1;
+    }
+    a.to_string()
+}
+
+fn run_computer2(
+    instructions: &Vec<u64>,
+    mut register_a: u64,
+    mut register_b: u64,
+    mut register_c: u64,
+) -> bool {
     let mut pc = 0;
-    let mut outputs = Vec::new();
+    // let mut outputs = Vec::new();
+    let mut outputs_len = 0;
     while pc < instructions.len() {
         let instruction = instructions[pc];
         // dbg!(pc, register_a, register_b, register_c, instruction);
         match instruction {
             // adv, combo
             0 => {
-                println!("adv");
+                // println!("adv");
                 let operand = instructions[pc + 1];
                 let operand = combo_operator(register_a, register_b, register_c, operand);
 
@@ -19,7 +66,7 @@ pub fn part1(contents: String) -> String {
             }
             // bxl, literal
             1 => {
-                println!("bxl");
+                // println!("bxl");
                 let operand = instructions[pc + 1];
                 let result = register_b ^ operand;
                 register_b = result;
@@ -27,7 +74,7 @@ pub fn part1(contents: String) -> String {
             }
             // bst
             2 => {
-                println!("bst");
+                // println!("bst");
                 let operand = instructions[pc + 1];
                 let operand = combo_operator(register_a, register_b, register_c, operand);
                 // todo: check this
@@ -38,7 +85,7 @@ pub fn part1(contents: String) -> String {
             }
             // jnz
             3 => {
-                println!("jnz");
+                // println!("jnz");
                 if register_a != 0 {
                     let operand = instructions[pc + 1];
                     pc = operand as usize;
@@ -48,23 +95,30 @@ pub fn part1(contents: String) -> String {
             }
             // bxc
             4 => {
-                println!("bxc");
+                // println!("bxc");
                 // todo: check
                 register_b = register_b ^ register_c;
                 pc += 2;
             }
             // out
             5 => {
-                println!("out");
+                // println!("out");
                 let operand = instructions[pc + 1];
                 let operand = combo_operator(register_a, register_b, register_c, operand);
                 let result = operand.rem_euclid(8);
-                outputs.push(result);
+                if instructions[outputs_len] != result {
+                    return false;
+                }
+                outputs_len += 1;
+                // outputs.push(result);
+                // if outputs != instructions[..outputs.len()] {
+                //     break;
+                // }
                 pc += 2;
             }
             // bdv
             6 => {
-                println!("bdv");
+                // println!("bdv");
                 let operand = instructions[pc + 1];
                 let operand = combo_operator(register_a, register_b, register_c, operand);
 
@@ -74,7 +128,7 @@ pub fn part1(contents: String) -> String {
             }
             // cdv
             7 => {
-                println!("cdv");
+                // println!("cdv");
                 let operand = instructions[pc + 1];
                 let operand = combo_operator(register_a, register_b, register_c, operand);
 
@@ -86,11 +140,105 @@ pub fn part1(contents: String) -> String {
         }
     }
 
-    dbg!(register_a, register_b, register_c);
+    // dbg!(register_a, register_b, register_c);
 
-    // for output in
-    let a: Vec<_> = outputs.into_iter().map(|c| c.to_string()).collect();
-    a.join(",")
+    outputs_len == instructions.len()
+}
+
+fn run_computer(
+    instructions: &Vec<u64>,
+    mut register_a: u64,
+    mut register_b: u64,
+    mut register_c: u64,
+) -> Vec<u64> {
+    let mut pc = 0;
+    let mut outputs = Vec::new();
+    while pc < instructions.len() {
+        let instruction = instructions[pc];
+        // dbg!(pc, register_a, register_b, register_c, instruction);
+        match instruction {
+            // adv, combo
+            0 => {
+                // println!("adv");
+                let operand = instructions[pc + 1];
+                let operand = combo_operator(register_a, register_b, register_c, operand);
+
+                let result = division(register_a, operand);
+                register_a = result;
+                pc += 2;
+            }
+            // bxl, literal
+            1 => {
+                // println!("bxl");
+                let operand = instructions[pc + 1];
+                let result = register_b ^ operand;
+                register_b = result;
+                pc += 2;
+            }
+            // bst
+            2 => {
+                // println!("bst");
+                let operand = instructions[pc + 1];
+                let operand = combo_operator(register_a, register_b, register_c, operand);
+                // todo: check this
+                let result = operand.rem_euclid(8);
+                // dbg!(operand, 8, result, register_b);
+                register_b = result;
+                pc += 2;
+            }
+            // jnz
+            3 => {
+                // println!("jnz");
+                if register_a != 0 {
+                    let operand = instructions[pc + 1];
+                    pc = operand as usize;
+                } else {
+                    pc += 2;
+                }
+            }
+            // bxc
+            4 => {
+                // println!("bxc");
+                // todo: check
+                register_b = register_b ^ register_c;
+                pc += 2;
+            }
+            // out
+            5 => {
+                // println!("out");
+                let operand = instructions[pc + 1];
+                let operand = combo_operator(register_a, register_b, register_c, operand);
+                let result = operand.rem_euclid(8);
+                outputs.push(result);
+                pc += 2;
+            }
+            // bdv
+            6 => {
+                // println!("bdv");
+                let operand = instructions[pc + 1];
+                let operand = combo_operator(register_a, register_b, register_c, operand);
+
+                let result = division(register_a, operand);
+                register_b = result;
+                pc += 2;
+            }
+            // cdv
+            7 => {
+                // println!("cdv");
+                let operand = instructions[pc + 1];
+                let operand = combo_operator(register_a, register_b, register_c, operand);
+
+                let result = division(register_a, operand);
+                register_c = result;
+                pc += 2;
+            }
+            _ => panic!("Unknown instruction"),
+        }
+    }
+
+    // dbg!(register_a, register_b, register_c);
+
+    outputs
 }
 
 fn division(register_a: u64, operand: u64) -> u64 {
@@ -137,10 +285,6 @@ fn parse_register(lines: &mut std::str::Lines<'_>, prefix: &str) -> u64 {
         .unwrap()
         .parse()
         .unwrap()
-}
-
-pub fn part2(_contents: String) -> String {
-    "example2".to_string()
 }
 
 #[cfg(test)]
