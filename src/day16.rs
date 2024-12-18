@@ -53,7 +53,7 @@ fn find_path(
     let mut expanded = HashSet::new();
 
     while let Some(node) = frontier.pop() {
-        let Node(position, _, path, _) = node.clone();
+        let Node(position, _, _path, _) = node.clone();
         if position == end {
             // won
             return node;

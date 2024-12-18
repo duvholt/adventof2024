@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 
 pub fn part1(contents: String) -> String {
     let (instructions, (register_a, register_b, register_c)) = parse(contents);
@@ -12,14 +12,18 @@ pub fn part1(contents: String) -> String {
 pub fn part2(contents: String) -> String {
     let (instructions, (_register_a, register_b, register_c)) = parse(contents);
 
-    let mut stack: Vec<(usize)> = Vec::new();
+    let mut stack: Vec<usize> = Vec::new();
     stack.push(0);
-    let mut visited = HashSet::new();
-    let mut lowest = usize::MAX;
+    let mut visited = FxHashSet::default();
+    let mut lowest_register = usize::MAX;
     while let Some(current_register_a) = stack.pop() {
         // solve by finding possible values for bit values left to right
         for byte in 0..8 {
             let new_register_a = (current_register_a << 3) + byte;
+            // skip worse solutions
+            if new_register_a > lowest_register {
+                continue;
+            }
             if visited.contains(&new_register_a) {
                 continue;
             }
@@ -27,12 +31,9 @@ pub fn part2(contents: String) -> String {
                 run_computer(&instructions, new_register_a as u64, register_b, register_c);
             if instructions == calculated {
                 // found solution, but there might be even better solutions
-                if new_register_a < lowest {
-                    lowest = new_register_a;
+                if new_register_a < lowest_register {
+                    lowest_register = new_register_a;
                 }
-                continue;
-            }
-            if calculated.len() >= instructions.len() {
                 continue;
             }
             let correct_instruction = instructions[instructions.len() - calculated.len()];
@@ -43,11 +44,11 @@ pub fn part2(contents: String) -> String {
         }
         visited.insert(current_register_a);
     }
-    lowest.to_string()
+    lowest_register.to_string()
 }
 
 fn run_computer(
-    instructions: &Vec<u64>,
+    instructions: &[u64],
     mut register_a: u64,
     mut register_b: u64,
     mut register_c: u64,
@@ -134,13 +135,13 @@ fn division(register_a: u64, operand: u64) -> u64 {
     let num = register_a;
 
     let den = 2u64.pow(operand as u32);
-    let result = num / den;
-    result
+
+    num / den
 }
 
 fn combo_operator(register_a: u64, register_b: u64, register_c: u64, operand: u64) -> u64 {
     match operand {
-        0 | 1 | 2 | 3 => operand,
+        0..=3 => operand,
         4 => register_a,
         5 => register_b,
         6 => register_c,
@@ -194,7 +195,7 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(fs::read_to_string("./input/17/real.txt").unwrap()),
-            "example2"
+            "266932601404433"
         );
     }
 }
