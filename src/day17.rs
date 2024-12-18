@@ -1,5 +1,7 @@
+use std::collections::HashSet;
+
 pub fn part1(contents: String) -> String {
-    let (instructions, (mut register_a, mut register_b, mut register_c)) = parse(contents);
+    let (instructions, (register_a, register_b, register_c)) = parse(contents);
 
     let outputs = run_computer(&instructions, register_a, register_b, register_c);
 
@@ -10,139 +12,38 @@ pub fn part1(contents: String) -> String {
 pub fn part2(contents: String) -> String {
     let (instructions, (_register_a, register_b, register_c)) = parse(contents);
 
-    let mut a = 17;
-    // let mut i = 0;
-    loop {
-        let output = run_computer2(&instructions, a, register_b, register_c);
-        if output {
-            break;
-        }
-        // 1: 15 or 1
-        // 2: 17, 145, 273 ???
-
-        // if output.len() > 2 && output[0..3] == instructions[0..3] {
-        //     dbg!("first", a, a.rem_euclid(32));
-        // }
-        // if a > 10000 {
-        //     break;
-        // }
-        if a % 10000000 == 0 {
-            dbg!(a);
-        }
-        // a += 128;
-        a += 1;
-        // if i % 2 == 0 {
-        //     a += 1;
-        // } else {
-        //     a += 15;
-        // }
-        // i += 1;
-    }
-    a.to_string()
-}
-
-fn run_computer2(
-    instructions: &Vec<u64>,
-    mut register_a: u64,
-    mut register_b: u64,
-    mut register_c: u64,
-) -> bool {
-    let mut pc = 0;
-    // let mut outputs = Vec::new();
-    let mut outputs_len = 0;
-    while pc < instructions.len() {
-        let instruction = instructions[pc];
-        // dbg!(pc, register_a, register_b, register_c, instruction);
-        match instruction {
-            // adv, combo
-            0 => {
-                // println!("adv");
-                let operand = instructions[pc + 1];
-                let operand = combo_operator(register_a, register_b, register_c, operand);
-
-                let result = division(register_a, operand);
-                register_a = result;
-                pc += 2;
+    let mut stack: Vec<(usize)> = Vec::new();
+    stack.push(0);
+    let mut visited = HashSet::new();
+    let mut lowest = usize::MAX;
+    while let Some(current_register_a) = stack.pop() {
+        // solve by finding possible values for bit values left to right
+        for byte in 0..8 {
+            let new_register_a = (current_register_a << 3) + byte;
+            if visited.contains(&new_register_a) {
+                continue;
             }
-            // bxl, literal
-            1 => {
-                // println!("bxl");
-                let operand = instructions[pc + 1];
-                let result = register_b ^ operand;
-                register_b = result;
-                pc += 2;
-            }
-            // bst
-            2 => {
-                // println!("bst");
-                let operand = instructions[pc + 1];
-                let operand = combo_operator(register_a, register_b, register_c, operand);
-                // todo: check this
-                let result = operand.rem_euclid(8);
-                // dbg!(operand, 8, result, register_b);
-                register_b = result;
-                pc += 2;
-            }
-            // jnz
-            3 => {
-                // println!("jnz");
-                if register_a != 0 {
-                    let operand = instructions[pc + 1];
-                    pc = operand as usize;
-                } else {
-                    pc += 2;
+            let calculated =
+                run_computer(&instructions, new_register_a as u64, register_b, register_c);
+            if instructions == calculated {
+                // found solution, but there might be even better solutions
+                if new_register_a < lowest {
+                    lowest = new_register_a;
                 }
+                continue;
             }
-            // bxc
-            4 => {
-                // println!("bxc");
-                // todo: check
-                register_b = register_b ^ register_c;
-                pc += 2;
+            if calculated.len() >= instructions.len() {
+                continue;
             }
-            // out
-            5 => {
-                // println!("out");
-                let operand = instructions[pc + 1];
-                let operand = combo_operator(register_a, register_b, register_c, operand);
-                let result = operand.rem_euclid(8);
-                if instructions[outputs_len] != result {
-                    return false;
-                }
-                outputs_len += 1;
-                // outputs.push(result);
-                // if outputs != instructions[..outputs.len()] {
-                //     break;
-                // }
-                pc += 2;
+            let correct_instruction = instructions[instructions.len() - calculated.len()];
+            let calculated_instruction = calculated[0];
+            if correct_instruction == calculated_instruction {
+                stack.push(new_register_a);
             }
-            // bdv
-            6 => {
-                // println!("bdv");
-                let operand = instructions[pc + 1];
-                let operand = combo_operator(register_a, register_b, register_c, operand);
-
-                let result = division(register_a, operand);
-                register_b = result;
-                pc += 2;
-            }
-            // cdv
-            7 => {
-                // println!("cdv");
-                let operand = instructions[pc + 1];
-                let operand = combo_operator(register_a, register_b, register_c, operand);
-
-                let result = division(register_a, operand);
-                register_c = result;
-                pc += 2;
-            }
-            _ => panic!("Unknown instruction"),
         }
+        visited.insert(current_register_a);
     }
-
-    // dbg!(register_a, register_b, register_c);
-
-    outputs_len == instructions.len()
+    lowest.to_string()
 }
 
 fn run_computer(
@@ -155,11 +56,9 @@ fn run_computer(
     let mut outputs = Vec::new();
     while pc < instructions.len() {
         let instruction = instructions[pc];
-        // dbg!(pc, register_a, register_b, register_c, instruction);
         match instruction {
             // adv, combo
             0 => {
-                // println!("adv");
                 let operand = instructions[pc + 1];
                 let operand = combo_operator(register_a, register_b, register_c, operand);
 
@@ -169,7 +68,6 @@ fn run_computer(
             }
             // bxl, literal
             1 => {
-                // println!("bxl");
                 let operand = instructions[pc + 1];
                 let result = register_b ^ operand;
                 register_b = result;
@@ -177,18 +75,14 @@ fn run_computer(
             }
             // bst
             2 => {
-                // println!("bst");
                 let operand = instructions[pc + 1];
                 let operand = combo_operator(register_a, register_b, register_c, operand);
-                // todo: check this
                 let result = operand.rem_euclid(8);
-                // dbg!(operand, 8, result, register_b);
                 register_b = result;
                 pc += 2;
             }
             // jnz
             3 => {
-                // println!("jnz");
                 if register_a != 0 {
                     let operand = instructions[pc + 1];
                     pc = operand as usize;
@@ -198,14 +92,11 @@ fn run_computer(
             }
             // bxc
             4 => {
-                // println!("bxc");
-                // todo: check
-                register_b = register_b ^ register_c;
+                register_b ^= register_c;
                 pc += 2;
             }
             // out
             5 => {
-                // println!("out");
                 let operand = instructions[pc + 1];
                 let operand = combo_operator(register_a, register_b, register_c, operand);
                 let result = operand.rem_euclid(8);
@@ -214,7 +105,6 @@ fn run_computer(
             }
             // bdv
             6 => {
-                // println!("bdv");
                 let operand = instructions[pc + 1];
                 let operand = combo_operator(register_a, register_b, register_c, operand);
 
@@ -224,7 +114,6 @@ fn run_computer(
             }
             // cdv
             7 => {
-                // println!("cdv");
                 let operand = instructions[pc + 1];
                 let operand = combo_operator(register_a, register_b, register_c, operand);
 
