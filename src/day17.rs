@@ -16,7 +16,7 @@ struct Node(usize);
 
 impl PartialOrd for Node {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        other.0.partial_cmp(&self.0)
+        Some(other.0.cmp(&self.0))
     }
 }
 

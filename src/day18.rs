@@ -10,7 +10,7 @@ struct Node(Position, Vec<Position>, u64);
 
 impl PartialOrd for Node {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        other.2.partial_cmp(&self.2)
+        Some(other.2.cmp(&self.2))
     }
 }
 
