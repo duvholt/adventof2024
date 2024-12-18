@@ -23,27 +23,47 @@ impl Ord for Node {
 pub fn part1(contents: String) -> String {
     // let bytes = 12;
     let bytes = 1024;
-    let map_grid = parse(contents, bytes);
+    let map_grid = parse(contents);
+
+    let map_grid: FxHashSet<Position> = map_grid.into_iter().take(bytes).collect();
 
     let start = (0, 0);
     // let end = (6, 6);
     let end = (70, 70);
 
-    let node = find_path(start, end, &map_grid);
+    let node = find_path(start, end, &map_grid).unwrap();
 
     // subtract start
     (node.1.len() - 1).to_string()
 }
 
 pub fn part2(contents: String) -> String {
-    contents
+    let start = (0, 0);
+    // let end = (6, 6);
+    let end = (70, 70);
+
+    // let mut bytes = 12;
+    let mut bytes = 1024;
+
+    let map_grid = parse(contents);
+
+    // bruteforce ftw
+    loop {
+        let map_grid_hash: FxHashSet<Position> = map_grid.iter().cloned().take(bytes).collect();
+        if find_path(start, end, &map_grid_hash).is_none() {
+            let p = map_grid[bytes - 1];
+            return format!("{},{}", p.0, p.1);
+        }
+        bytes += 1;
+        dbg!(bytes);
+    }
 }
 
 fn find_path(
     start: (usize, usize),
     end: (usize, usize),
     map_grid: &FxHashSet<(usize, usize)>,
-) -> Node {
+) -> Option<Node> {
     let node = Node(start, vec![(start)], 0);
     let mut frontier = BinaryHeap::new();
     frontier.push(node);
@@ -55,7 +75,7 @@ fn find_path(
         let Node(position, _, _) = node.clone();
         if position == end {
             // won
-            return node;
+            return Some(node);
         }
         let neighbours = neighbourhood(&map_grid, &node, bounds as isize);
         let mut hash_frontier: FxHashMap<_, _> =
@@ -83,7 +103,7 @@ fn find_path(
             .collect();
         expanded.insert(node.0);
     }
-    panic!("Unable to find path")
+    None
 }
 
 #[allow(unused)]
@@ -139,16 +159,15 @@ fn neighbourhood(map_grid: &FxHashSet<Position>, node: &Node, bounds: isize) -> 
 
 type Position = (usize, usize);
 
-fn parse(contents: String, limit: usize) -> FxHashSet<Position> {
-    let mut map = FxHashSet::default();
-    for line in contents.lines().take(limit) {
+fn parse(contents: String) -> Vec<Position> {
+    let mut positions = Vec::new();
+    for line in contents.lines() {
         let mut parts = line.split(",");
         let x = parts.next().unwrap().parse().unwrap();
         let y = parts.next().unwrap().parse().unwrap();
-        map.insert((x, y));
+        positions.push((x, y));
     }
-
-    map
+    positions
 }
 
 #[cfg(test)]
@@ -161,7 +180,7 @@ mod tests {
     fn test_part1() {
         assert_eq!(
             part1(fs::read_to_string("./input/18/real.txt").unwrap()),
-            "1"
+            "318"
         );
     }
 
@@ -169,7 +188,7 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(fs::read_to_string("./input/18/real.txt").unwrap()),
-            "1"
+            "56,29"
         );
     }
 }
