@@ -28,6 +28,40 @@ pub fn part1(contents: String) -> String {
     possible.to_string()
 }
 
+pub fn part2_memoized(contents: String) -> String {
+    let mut parts = contents.split("\n\n");
+    let patterns: Vec<&str> = parts.next().unwrap().split(", ").collect();
+
+    let towel_designs: Vec<_> = parts.next().unwrap().lines().collect();
+    let mut s = 0;
+    for towel_design in towel_designs {
+        let mut memoized = FxHashMap::default();
+        s += memoized_towel_count(towel_design, &patterns, &mut memoized);
+    }
+    s.to_string()
+}
+
+fn memoized_towel_count(
+    towel_design: &str,
+    patterns: &Vec<&str>,
+    memoized: &mut FxHashMap<String, usize>,
+) -> usize {
+    if let Some(val) = memoized.get(towel_design) {
+        return *val;
+    }
+    if towel_design.is_empty() {
+        return 1;
+    }
+    let mut val = 0;
+    for pattern in patterns.iter() {
+        if let Some(suffix) = towel_design.strip_prefix(pattern) {
+            val += memoized_towel_count(suffix, patterns, memoized);
+        }
+    }
+    memoized.insert(towel_design.to_string(), val);
+    val
+}
+
 pub fn part2(contents: String) -> String {
     let mut parts = contents.split("\n\n");
     let patterns: Vec<&str> = parts.next().unwrap().split(", ").collect();
