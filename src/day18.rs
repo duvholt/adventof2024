@@ -55,7 +55,6 @@ pub fn part2(contents: String) -> String {
             return format!("{},{}", p.0, p.1);
         }
         bytes += 1;
-        dbg!(bytes);
     }
 }
 
