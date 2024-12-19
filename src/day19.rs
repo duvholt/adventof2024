@@ -1,9 +1,6 @@
-use std::{
-    collections::{hash_map::Entry, HashMap, VecDeque},
-    vec,
-};
+use std::collections::{hash_map::Entry, VecDeque};
 
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 pub fn part1(contents: String) -> String {
     let mut parts = contents.split("\n\n");
@@ -37,57 +34,53 @@ pub fn part2(contents: String) -> String {
 
     let towel_designs: Vec<_> = parts.next().unwrap().lines().collect();
 
-    let mut possible = 0;
+    let mut paths = 0;
     for towel_design in towel_designs {
-        let mut stack: VecDeque<(String, Vec<String>)> = VecDeque::new();
-        stack.push_back((towel_design.to_string(), vec![]));
-        let mut visited = FxHashSet::default();
-        let mut count_map: FxHashMap<String, Vec<String>> = FxHashMap::default();
+        let mut queue = Vec::new();
+        queue.push(towel_design.to_string());
 
-        let mut goal = false;
+        // build graph of patterns from full design to empty string
+        let mut edges: FxHashMap<String, Vec<String>> = FxHashMap::default();
 
-        while let Some((wip_design, path)) = stack.pop_front() {
+        while let Some(wip_design) = queue.pop() {
             if wip_design.is_empty() {
-                goal = true;
+                // all patterns found
                 continue;
             }
             for pattern in patterns.iter() {
                 if let Some(stripped) = wip_design.strip_prefix(pattern) {
-                    match count_map.entry(stripped.to_string()) {
+                    match edges.entry(stripped.to_string()) {
                         Entry::Occupied(occupied_entry) => {
                             let a = occupied_entry.into_mut();
                             a.push(wip_design.clone());
                         }
                         Entry::Vacant(vacant_entry) => {
                             vacant_entry.insert(vec![wip_design.clone()]);
-                            let mut new = path.clone();
-                            new.push(stripped.to_string());
-                            stack.push_back((stripped.to_string(), new));
+                            // only visit node if it's the first time we see it
+                            queue.push(stripped.to_string());
                         }
                     }
                 }
             }
-            visited.insert(path);
         }
-        if goal {
-            let s = count_paths(towel_design, count_map);
-            possible += s;
+        // a solution is only possible if there's an edge to the empty node
+        let possible = edges.contains_key("");
+        if possible {
+            let s = count_paths(towel_design, edges);
+            paths += s;
         }
     }
 
-    possible.to_string()
+    paths.to_string()
 }
 
-fn count_paths(
-    towel_design: &str,
-    count_map: std::collections::HashMap<String, Vec<String>, rustc_hash::FxBuildHasher>,
-) -> usize {
-    // let sink = towel_design;
-    // let source = "";
-    let mut reversed_count_map: FxHashMap<String, Vec<String>> = FxHashMap::default();
-    for (key, values) in count_map.iter() {
+fn count_paths(towel_design: &str, edges: FxHashMap<String, Vec<String>>) -> usize {
+    // reverse graph
+    // probably not necessary but sometimes bugs out if I don't do it in reverse order
+    let mut reversed_edges: FxHashMap<String, Vec<String>> = FxHashMap::default();
+    for (key, values) in edges.iter() {
         for value in values {
-            let entry = reversed_count_map.entry(value.to_string()).or_default();
+            let entry = reversed_edges.entry(value.to_string()).or_default();
             entry.push(key.to_string());
         }
     }
@@ -95,37 +88,31 @@ fn count_paths(
     let sink = "";
     let source = towel_design;
 
-    let l = topological_sort(&reversed_count_map, source);
+    // we need to traverse nodes in topological order to count all paths correctly
+    let nodes = topological_sort(&reversed_edges, source);
 
-    let mut part_count: FxHashMap<&str, usize> = FxHashMap::default();
+    let mut cumulative_edge_count: FxHashMap<&str, usize> = FxHashMap::default();
 
-    for part in l {
-        let part_value = part_count.get(part).cloned().unwrap_or(1);
-
-        let parts = reversed_count_map.get(part);
+    for part in nodes {
+        let parts = reversed_edges.get(part);
         if parts.is_none() {
             continue;
         }
+        let part_value = cumulative_edge_count.get(part).cloned().unwrap_or(1);
         for p in parts.unwrap() {
-            match part_count.entry(p) {
-                Entry::Occupied(occupied_entry) => {
-                    *occupied_entry.into_mut() += part_value;
-                }
-                Entry::Vacant(vacant_entry) => {
-                    vacant_entry.insert(part_value);
-                }
-            }
+            *cumulative_edge_count.entry(p).or_default() += part_value;
         }
     }
 
-    part_count.get(sink).cloned().unwrap()
+    cumulative_edge_count.get(sink).cloned().unwrap()
 }
 
 fn topological_sort<'a>(
-    reversed_count_map: &'a HashMap<String, Vec<String>, rustc_hash::FxBuildHasher>,
+    reversed_count_map: &'a FxHashMap<String, Vec<String>>,
     source: &'a str,
 ) -> Vec<&'a str> {
-    let mut fre: HashMap<String, usize> = HashMap::default();
+    // Kahn’s algorithm
+    let mut fre: FxHashMap<String, usize> = FxHashMap::default();
 
     for (_key, value) in reversed_count_map.iter() {
         for v in value {
