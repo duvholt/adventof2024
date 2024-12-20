@@ -25,7 +25,6 @@ pub fn part1(contents: String) -> String {
                 // jump costs 2
                 let diff = from_cost as isize - to_cost as isize - 2;
                 if diff >= 100 {
-                    // dbg!(&from, &to, from_cost, to_cost);
                     good_cheat += 1;
                 }
             }
@@ -35,8 +34,59 @@ pub fn part1(contents: String) -> String {
     good_cheat.to_string()
 }
 
-pub fn part2(_contents: String) -> String {
-    "example2".to_string()
+pub fn part2(contents: String) -> String {
+    let (map_grid, start, end) = parse(contents);
+
+    let node = find_path(start, end, &map_grid);
+
+    let path = node.unwrap().1;
+
+    let path_cost: HashMap<Position, usize> = path.iter().cloned().collect();
+
+    let mut good_cheat = 0;
+
+    let mut relative_positions = HashSet::new();
+    for jump in 1..=20 {
+        // can jump to any euclidean distance up to 20
+        for t in 0..=jump {
+            let u = jump - t;
+            if t > u {
+                break;
+            }
+            // down right
+            relative_positions.insert(((t, u), jump));
+            relative_positions.insert(((u, t), jump));
+
+            // down left
+            relative_positions.insert(((-t, u), jump));
+            relative_positions.insert(((-u, t), jump));
+
+            // up right
+            relative_positions.insert(((t, -u), jump));
+            relative_positions.insert(((u, -t), jump));
+
+            // up left
+            relative_positions.insert(((-t, -u), jump));
+            relative_positions.insert(((-u, -t), jump));
+        }
+    }
+
+    for (from, from_cost) in path {
+        for (jump, jump_cost) in relative_positions.clone() {
+            let to = (
+                (from.0 as isize + jump.0) as usize,
+                (from.1 as isize + jump.1) as usize,
+            );
+            if let Some(&to_cost) = path_cost.get(&to) {
+                let diff = from_cost as isize - to_cost as isize - jump_cost;
+                if diff >= 100 {
+                    good_cheat += 1;
+                }
+            }
+        }
+    }
+
+    good_cheat.to_string()
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
