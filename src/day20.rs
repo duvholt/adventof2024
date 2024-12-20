@@ -1,15 +1,14 @@
-use std::collections::{hash_map::Entry, BinaryHeap, HashMap, HashSet};
+use std::collections::VecDeque;
 
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 pub fn part1(contents: String) -> String {
     let (map_grid, start, end) = parse(contents);
 
     let node = find_path(start, end, &map_grid);
 
-    let path = node.unwrap().1;
-
-    let path_cost: HashMap<Position, usize> = path.iter().cloned().collect();
+    let path = node.unwrap();
+    let path_cost: FxHashMap<Position, usize> = path.iter().cloned().collect();
 
     let jumps: Vec<(isize, isize)> = vec![(0, -2), (0, 2), (-2, 0), (2, 0)];
 
@@ -37,15 +36,15 @@ pub fn part1(contents: String) -> String {
 pub fn part2(contents: String) -> String {
     let (map_grid, start, end) = parse(contents);
 
-    let node = find_path(start, end, &map_grid);
+    let path = find_path(start, end, &map_grid);
 
-    let path = node.unwrap().1;
+    let path = path.unwrap();
 
-    let path_cost: HashMap<Position, usize> = path.iter().cloned().collect();
+    let path_cost: FxHashMap<Position, usize> = path.iter().cloned().collect();
 
     let mut good_cheat = 0;
 
-    let mut relative_positions = HashSet::new();
+    let mut relative_positions = FxHashSet::default();
     for jump in 1..=20 {
         // can jump to any euclidean distance up to 20
         for t in 0..=jump {
@@ -89,69 +88,56 @@ pub fn part2(contents: String) -> String {
     good_cheat.to_string()
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
-struct Node(Position, Vec<(Position, usize)>, usize);
-
-impl PartialOrd for Node {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(other.2.cmp(&self.2))
-    }
-}
-
-impl Ord for Node {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.2.cmp(&self.2)
-    }
-}
+#[derive(Debug)]
+struct Node(Position, usize);
 
 fn find_path(
     start: (usize, usize),
     end: (usize, usize),
-    map_grid: &Vec<Vec<bool>>,
-) -> Option<Node> {
-    let node = Node(start, vec![(start, 0)], 0);
-    let mut frontier = BinaryHeap::new();
-    frontier.push(node);
-    let mut expanded = HashSet::new();
+    map_grid: &[Vec<bool>],
+) -> Option<Vec<(Position, usize)>> {
+    let estimated_size = map_grid.len().pow(2) / 2;
+    let node = Node(start, 0);
+    let mut frontier = VecDeque::with_capacity(estimated_size);
+    frontier.push_front(node);
+    let mut expanded =
+        FxHashSet::with_capacity_and_hasher(estimated_size, rustc_hash::FxBuildHasher);
 
-    while let Some(node) = frontier.pop() {
-        let Node(position, _, _) = node.clone();
-        if position == end {
-            // won
+    let mut path_map = FxHashMap::default();
+
+    while let Some(node) = frontier.pop_back() {
+        if node.0 == end {
             // print_map_path(map_grid, &node.1);
-            return Some(node);
+            return Some(traverse_path(&path_map, &(node.0, node.1)));
         }
-        let neighbours = neighbourhood(&map_grid, &node);
-        let mut hash_frontier: FxHashMap<_, _> =
-            frontier.into_iter().map(|f| ((f.0), (f.1, f.2))).collect();
+        let neighbours = neighbourhood(map_grid, &node);
         for neighbour in neighbours {
             if !expanded.contains(&(neighbour.0)) {
-                let entry = hash_frontier.entry(neighbour.0);
-                match entry {
-                    Entry::Occupied(mut entry) => {
-                        let val = entry.get_mut();
-                        if val.1 > neighbour.2 {
-                            *val = (neighbour.1, neighbour.2);
-                        }
-                    }
-                    Entry::Vacant(entry) => {
-                        entry.insert((neighbour.1, neighbour.2));
-                    }
-                }
+                path_map.insert(neighbour.0, (node.0, node.1));
+                frontier.push_front(neighbour);
             }
         }
-
-        frontier = hash_frontier
-            .into_iter()
-            .map(|(k, v)| Node(k, v.0, v.1))
-            .collect();
         expanded.insert(node.0);
     }
     None
 }
 
+fn traverse_path(
+    path_map: &FxHashMap<Position, (Position, usize)>,
+    start: &(Position, usize),
+) -> Vec<(Position, usize)> {
+    let mut position = start.0;
+    let mut path = vec![*start];
+    while let Some(next) = path_map.get(&position) {
+        path.push(*next);
+        position = next.0;
+    }
+    path.reverse();
+    path
+}
+
 #[allow(unused)]
-fn print_map_path(map_grid: &[Vec<bool>], node_path: &Vec<(Position, usize)>) {
+fn print_map_path(map_grid: &[Vec<bool>], node_path: &[(Position, usize)]) {
     let positions: Vec<_> = node_path.iter().cloned().map(|(p, _)| p).collect();
     println!("\n\n");
     let mut s = String::new();
@@ -174,9 +160,9 @@ fn print_map_path(map_grid: &[Vec<bool>], node_path: &Vec<(Position, usize)>) {
     println!("{}", s);
 }
 
-fn neighbourhood(map_grid: &Vec<Vec<bool>>, node: &Node) -> Vec<Node> {
+fn neighbourhood(map_grid: &[Vec<bool>], node: &Node) -> Vec<Node> {
     let (node_x, node_y) = node.0;
-    let mut new = Vec::new();
+    let mut new = Vec::with_capacity(4);
 
     for (rel_x, rel_y) in [(0, 1), (0, -1), (1, 0), (-1, 0)] {
         let x = (node_x as isize) + rel_x;
@@ -188,10 +174,8 @@ fn neighbourhood(map_grid: &Vec<Vec<bool>>, node: &Node) -> Vec<Node> {
         if map_grid[y as usize][x as usize] {
             continue;
         }
-        let mut new_path = node.1.clone();
-        let cost = node.2 + 1;
-        new_path.push((position, cost));
-        new.push(Node(position, new_path, cost));
+        let cost = node.1 + 1;
+        new.push(Node(position, cost));
     }
 
     new
@@ -236,7 +220,7 @@ mod tests {
     fn test_part1() {
         assert_eq!(
             part1(fs::read_to_string("./input/20/real.txt").unwrap()),
-            "example"
+            "1293"
         );
     }
 
@@ -244,7 +228,7 @@ mod tests {
     fn test_part2() {
         assert_eq!(
             part2(fs::read_to_string("./input/20/real.txt").unwrap()),
-            "example2"
+            "977747"
         );
     }
 }
