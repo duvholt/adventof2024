@@ -1,7 +1,4 @@
-use std::{
-    collections::{hash_map::Entry, BinaryHeap, HashSet},
-    hash::Hash,
-};
+use std::{collections::VecDeque, hash::Hash};
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -75,43 +72,29 @@ fn find_path(
     map_grid: &FxHashSet<(usize, usize)>,
 ) -> Option<Vec<Position>> {
     let node = Node(start, 0);
-    let mut frontier = BinaryHeap::new();
-    frontier.push(node);
-    let mut expanded = HashSet::new();
+    let mut frontier = VecDeque::new();
+    frontier.push_back(node);
+    let mut expanded = FxHashSet::default();
+    expanded.insert(start);
 
     let bounds = end.0;
     let mut path_map = FxHashMap::default();
 
-    while let Some(node) = frontier.pop() {
+    while let Some(node) = frontier.pop_front() {
         let Node(position, _) = node.clone();
         if position == end {
             // won
             return Some(traverse_path(&path_map, &position));
         }
         let neighbours = neighbourhood(map_grid, &node, bounds as isize);
-        let mut hash_frontier: FxHashMap<_, _> =
-            frontier.into_iter().map(|f| ((f.0), (f.1))).collect();
 
         for neighbour in neighbours {
             if !expanded.contains(&(neighbour.0)) {
-                let entry = hash_frontier.entry(neighbour.0);
-                match entry {
-                    Entry::Occupied(mut entry) => {
-                        let val = entry.get_mut();
-                        if *val > neighbour.1 {
-                            *val = neighbour.1;
-                        }
-                    }
-                    Entry::Vacant(entry) => {
-                        entry.insert(neighbour.1);
-                    }
-                }
                 path_map.insert(neighbour.0, node.0);
+                expanded.insert(neighbour.0);
+                frontier.push_back(neighbour);
             }
         }
-        // print_map_path(map_grid, bounds, &node.1, &hash_frontier);
-        frontier = hash_frontier.into_iter().map(|(k, v)| Node(k, v)).collect();
-        expanded.insert(node.0);
     }
     None
 }
