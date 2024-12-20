@@ -44,6 +44,29 @@ pub fn part2(contents: String) -> String {
 
     let mut good_cheat = 0;
 
+    let relative_positions = find_relative_positions();
+    let relative_positions: Vec<_> = relative_positions.into_iter().collect();
+
+    for (from, from_cost) in path {
+        for (jump, jump_cost) in relative_positions.iter() {
+            let to = (
+                (from.0 as isize + jump.0) as usize,
+                (from.1 as isize + jump.1) as usize,
+            );
+            if let Some(&to_cost) = path_cost.get(&to) {
+                let diff = from_cost as isize - to_cost as isize - jump_cost;
+                if diff >= 100 {
+                    good_cheat += 1;
+                }
+            }
+        }
+    }
+
+    good_cheat.to_string()
+}
+
+fn find_relative_positions(
+) -> std::collections::HashSet<((isize, isize), isize), rustc_hash::FxBuildHasher> {
     let mut relative_positions = FxHashSet::default();
     for jump in 1..=20 {
         // can jump to any euclidean distance up to 20
@@ -69,23 +92,7 @@ pub fn part2(contents: String) -> String {
             relative_positions.insert(((-u, -t), jump));
         }
     }
-
-    for (from, from_cost) in path {
-        for (jump, jump_cost) in relative_positions.clone() {
-            let to = (
-                (from.0 as isize + jump.0) as usize,
-                (from.1 as isize + jump.1) as usize,
-            );
-            if let Some(&to_cost) = path_cost.get(&to) {
-                let diff = from_cost as isize - to_cost as isize - jump_cost;
-                if diff >= 100 {
-                    good_cheat += 1;
-                }
-            }
-        }
-    }
-
-    good_cheat.to_string()
+    relative_positions
 }
 
 #[derive(Debug)]
