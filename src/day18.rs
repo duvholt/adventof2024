@@ -6,17 +6,17 @@ use std::{
 use rustc_hash::{FxHashMap, FxHashSet};
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-struct Node(Position, Vec<Position>, u64);
+struct Node(Position, u64);
 
 impl PartialOrd for Node {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(other.2.cmp(&self.2))
+        Some(other.1.cmp(&self.1))
     }
 }
 
 impl Ord for Node {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.2.cmp(&self.2)
+        other.1.cmp(&self.1)
     }
 }
 
@@ -34,7 +34,7 @@ pub fn part1(contents: String) -> String {
     let node = find_path(start, end, &map_grid).unwrap();
 
     // subtract start
-    (node.1.len() - 1).to_string()
+    (node.len() - 1).to_string()
 }
 
 pub fn part2(contents: String) -> String {
@@ -58,48 +58,59 @@ pub fn part2(contents: String) -> String {
     }
 }
 
+fn traverse_path(path_map: &FxHashMap<Position, Position>, start: &Position) -> Vec<Position> {
+    let mut position = start;
+    let mut path = vec![*start];
+    while let Some(next) = path_map.get(position) {
+        path.push(*next);
+        position = next;
+    }
+    path.reverse();
+    path
+}
+
 fn find_path(
     start: (usize, usize),
     end: (usize, usize),
     map_grid: &FxHashSet<(usize, usize)>,
-) -> Option<Node> {
-    let node = Node(start, vec![(start)], 0);
+) -> Option<Vec<Position>> {
+    let node = Node(start, 0);
     let mut frontier = BinaryHeap::new();
     frontier.push(node);
     let mut expanded = HashSet::new();
 
     let bounds = end.0;
+    let mut path_map = FxHashMap::default();
 
     while let Some(node) = frontier.pop() {
-        let Node(position, _, _) = node.clone();
+        let Node(position, _) = node.clone();
         if position == end {
             // won
-            return Some(node);
+            return Some(traverse_path(&path_map, &position));
         }
-        let neighbours = neighbourhood(&map_grid, &node, bounds as isize);
+        let neighbours = neighbourhood(map_grid, &node, bounds as isize);
         let mut hash_frontier: FxHashMap<_, _> =
-            frontier.into_iter().map(|f| ((f.0), (f.1, f.2))).collect();
+            frontier.into_iter().map(|f| ((f.0), (f.1))).collect();
+
         for neighbour in neighbours {
             if !expanded.contains(&(neighbour.0)) {
                 let entry = hash_frontier.entry(neighbour.0);
                 match entry {
                     Entry::Occupied(mut entry) => {
                         let val = entry.get_mut();
-                        if val.1 > neighbour.2 {
-                            *val = (neighbour.1, neighbour.2);
+                        if *val > neighbour.1 {
+                            *val = neighbour.1;
                         }
                     }
                     Entry::Vacant(entry) => {
-                        entry.insert((neighbour.1, neighbour.2));
+                        entry.insert(neighbour.1);
                     }
                 }
+                path_map.insert(neighbour.0, node.0);
             }
         }
         // print_map_path(map_grid, bounds, &node.1, &hash_frontier);
-        frontier = hash_frontier
-            .into_iter()
-            .map(|(k, v)| Node(k, v.0, v.1))
-            .collect();
+        frontier = hash_frontier.into_iter().map(|(k, v)| Node(k, v)).collect();
         expanded.insert(node.0);
     }
     None
@@ -148,9 +159,7 @@ fn neighbourhood(map_grid: &FxHashSet<Position>, node: &Node, bounds: isize) -> 
         if map_grid.contains(&position) {
             continue;
         }
-        let mut new_path = node.1.clone();
-        new_path.push(position);
-        new.push(Node(position, new_path, node.2 + 1));
+        new.push(Node(position, node.1 + 1));
     }
 
     new
