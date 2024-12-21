@@ -210,11 +210,7 @@ fn find_robot_keys(
             let position = robot_map[key];
             let robot_move = euclidean_move(&current_position, &position);
             // penalize changing directions
-            let mut cost = robot_move.0 + robot_move.1;
-            if robot_move.0 != 0 && robot_move.1 != 0 {
-                cost += 1000;
-            }
-            cost
+            robot_move.0 + robot_move.1
         })
         .unwrap();
     // calculate key presses
