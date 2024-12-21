@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 #[derive(Debug)]
 enum MoveDirection {
@@ -9,49 +9,69 @@ enum MoveDirection {
 pub fn part1(contents: String) -> String {
     let rooms: Vec<_> = contents.lines().collect();
 
-    let door_keypad = vec![
+    let (door_map, robot_map) = keypad_maps();
+
+    let mut sum = 0;
+    for door_number in rooms {
+        sum += expand_input(door_number, &door_map, &robot_map, 2);
+    }
+
+    sum.to_string()
+}
+
+pub fn part2(contents: String) -> String {
+    let rooms: Vec<_> = contents.lines().collect();
+
+    let (door_map, robot_map) = keypad_maps();
+
+    let mut sum = 0;
+    for door_number in rooms {
+        sum += expand_input(door_number, &door_map, &robot_map, 25);
+    }
+
+    sum.to_string()
+}
+
+fn keypad_maps() -> (
+    FxHashMap<char, (isize, isize)>,
+    FxHashMap<char, (isize, isize)>,
+) {
+    let door_keypad = [
         vec!['7', '8', '9'],
         vec!['4', '5', '6'],
         vec!['1', '2', '3'],
         vec!['-', '0', 'A'],
     ];
-    let robot_keypad = vec![vec!['-', '^', 'A'], vec!['<', 'v', '>']];
+    let robot_keypad = [vec!['-', '^', 'A'], vec!['<', 'v', '>']];
     // - is illegal
 
-    let mut door_map: HashMap<char, Position> = HashMap::default();
+    let mut door_map: FxHashMap<char, Position> = FxHashMap::default();
     for y in 0..door_keypad.len() {
         for x in 0..door_keypad[0].len() {
             door_map.insert(door_keypad[y][x], (x as isize, y as isize));
         }
     }
 
-    let mut robot_map: HashMap<char, Position> = HashMap::default();
+    let mut robot_map: FxHashMap<char, Position> = FxHashMap::default();
     for y in 0..robot_keypad.len() {
         for x in 0..robot_keypad[0].len() {
             robot_map.insert(robot_keypad[y][x], (x as isize, y as isize));
         }
     }
-
-    let mut sum = 0;
-    for door_number in rooms {
-        sum += expand_input(door_number, &door_map, &robot_map);
-    }
-
-    sum.to_string()
+    (door_map, robot_map)
 }
 
 fn expand_input(
     door_number: &str,
-    door_map: &HashMap<char, (isize, isize)>,
-    robot_map: &HashMap<char, (isize, isize)>,
+    door_map: &FxHashMap<char, (isize, isize)>,
+    robot_map: &FxHashMap<char, (isize, isize)>,
+    times_to_expand: usize,
 ) -> usize {
     let start_door = (2, 3);
     let start_robot = (2, 0);
     let seq: Vec<_> = door_number.chars().collect();
 
     let mut current_position = start_door;
-    let mut current_robot1_position = start_robot;
-    let mut current_robot2_position = start_robot;
 
     let mut s = String::new();
 
@@ -72,45 +92,19 @@ fn expand_input(
 
         // possible optimization: is robot always at A after finishing previous robots seq?
 
-        // dbg!(&door_move, &first_door_moves);
         {
             // Robot 1
             let keys_to_press1 =
                 find_robot_keys(robot_map, current_position, door_move, first_door_moves);
 
-            // println!("{:?}", &keys_to_press1);
-
-            // Robot 2
-            let mut keys_to_press2 = vec![];
-            for next_robot_key1 in keys_to_press1 {
-                let (robot1_move, robot1_first_moves) =
-                    robot_move(robot_map, &mut current_robot1_position, next_robot_key1);
-                keys_to_press2.extend(find_robot_keys(
-                    robot_map,
-                    current_robot1_position,
-                    robot1_move,
-                    robot1_first_moves,
-                ));
+            // Middle robots
+            let mut expanded = keys_to_press1;
+            for i in 0..times_to_expand {
+                expanded = expand_keys(robot_map, start_robot, expanded);
+                dbg!(door_number, i);
             }
 
-            // println!("{:?}", &keys_to_press2);
-
-            // Robot 3
-            let mut keys_to_press3 = vec![];
-            for next_robot_key2 in keys_to_press2 {
-                let (robot2_move, robot2_first_moves) =
-                    robot_move(robot_map, &mut current_robot2_position, next_robot_key2);
-                keys_to_press3.extend(find_robot_keys(
-                    robot_map,
-                    current_robot2_position,
-                    robot2_move,
-                    robot2_first_moves,
-                ));
-            }
-
-            // println!("{:?}", &keys_to_press3);
-
-            for k in keys_to_press3 {
+            for k in expanded {
                 s.push(k);
             }
         }
@@ -123,8 +117,28 @@ fn expand_input(
     num * s.len()
 }
 
+fn expand_keys(
+    robot_map: &FxHashMap<char, (isize, isize)>,
+    start_robot: (isize, isize),
+    keys_to_press1: Vec<char>,
+) -> Vec<char> {
+    let mut current_robot1_position = start_robot;
+    let mut keys_to_press2 = vec![];
+    for next_robot_key1 in keys_to_press1 {
+        let (robot1_move, robot1_first_moves) =
+            robot_move(robot_map, &mut current_robot1_position, next_robot_key1);
+        keys_to_press2.extend(find_robot_keys(
+            robot_map,
+            current_robot1_position,
+            robot1_move,
+            robot1_first_moves,
+        ));
+    }
+    keys_to_press2
+}
+
 fn robot_move(
-    robot_map: &HashMap<char, (isize, isize)>,
+    robot_map: &FxHashMap<char, (isize, isize)>,
     current_robot_position: &mut (isize, isize),
     robot_key: char,
 ) -> ((isize, isize), Vec<MoveDirection>) {
@@ -183,58 +197,22 @@ fn find_first_moves_robot(
 }
 
 fn find_robot_keys(
-    robot_map: &HashMap<char, (isize, isize)>,
+    robot_map: &FxHashMap<char, (isize, isize)>,
     current_position: (isize, isize),
     position_move: (isize, isize),
     first_moves: Vec<MoveDirection>,
 ) -> Vec<char> {
-    let mut possible_start_keys = vec![];
-    if first_moves.is_empty() {
-        // already at correct key?
-        possible_start_keys.push('A');
-    }
-    for first_door_move in first_moves {
-        let key = match first_door_move {
-            MoveDirection::Vertical if position_move.1 > 0 => 'v',
-            MoveDirection::Vertical if position_move.1 < 0 => '^',
-            MoveDirection::Horizontal if position_move.0 > 0 => '>',
-            MoveDirection::Horizontal if position_move.0 < 0 => '<',
-            _ => panic!("wtf"),
-        };
-        possible_start_keys.push(key);
-    }
-    // pick key with shortest euclidean distance
-    let next_key = possible_start_keys
-        .into_iter()
-        .min_by_key(|key| {
-            let position = robot_map[key];
-            let robot_move = euclidean_move(&current_position, &position);
-            // penalize changing directions
-            robot_move.0 + robot_move.1
-        })
-        .unwrap();
+    let next_key = start_key(robot_map, current_position, position_move, first_moves);
+    // let next_key = possible_start_keys[0];
     // calculate key presses
-    let mut single_keys = vec![next_key];
-    match next_key {
-        '^' | 'v' => {
-            if position_move.0 > 0 {
-                single_keys.push('>');
-            }
-            if position_move.0 < 0 {
-                single_keys.push('<');
-            }
-        }
-        '<' | '>' => {
-            if position_move.1 > 0 {
-                single_keys.push('v');
-            }
-            if position_move.1 < 0 {
-                single_keys.push('^');
-            }
-        }
-        _ => {}
-    }
-    let mut keys_to_press = vec![];
+    let single_keys = find_key_order(position_move, next_key);
+
+    expand_single_keys(position_move, single_keys)
+}
+
+fn expand_single_keys(position_move: (isize, isize), single_keys: Vec<char>) -> Vec<char> {
+    let mut keys_to_press =
+        Vec::with_capacity(position_move.0.unsigned_abs() + position_move.1.unsigned_abs());
     for single_key in single_keys {
         match single_key {
             '^' | 'v' => {
@@ -255,6 +233,61 @@ fn find_robot_keys(
     keys_to_press
 }
 
+fn find_key_order(position_move: (isize, isize), next_key: char) -> Vec<char> {
+    let mut single_keys = vec![next_key];
+    match next_key {
+        '^' | 'v' => {
+            if position_move.0 > 0 {
+                single_keys.push('>');
+            }
+            if position_move.0 < 0 {
+                single_keys.push('<');
+            }
+        }
+        '<' | '>' => {
+            if position_move.1 > 0 {
+                single_keys.push('v');
+            }
+            if position_move.1 < 0 {
+                single_keys.push('^');
+            }
+        }
+        _ => {}
+    }
+    single_keys
+}
+
+fn start_key(
+    robot_map: &std::collections::HashMap<char, (isize, isize), rustc_hash::FxBuildHasher>,
+    current_position: (isize, isize),
+    position_move: (isize, isize),
+    first_moves: Vec<MoveDirection>,
+) -> char {
+    if first_moves.is_empty() {
+        // already at correct key?
+        return 'A';
+    }
+    let possible_start_keys =
+        first_moves
+            .into_iter()
+            .map(|first_door_move| match first_door_move {
+                MoveDirection::Vertical if position_move.1 > 0 => 'v',
+                MoveDirection::Vertical if position_move.1 < 0 => '^',
+                MoveDirection::Horizontal if position_move.0 > 0 => '>',
+                MoveDirection::Horizontal if position_move.0 < 0 => '<',
+                _ => unreachable!(),
+            });
+    // pick key with shortest euclidean distance
+
+    possible_start_keys
+        .min_by_key(|key| {
+            let position = robot_map[key];
+            let robot_move = euclidean_move(&current_position, &position);
+            robot_move.0 + robot_move.1
+        })
+        .unwrap()
+}
+
 type Position = (isize, isize);
 type Move = (isize, isize);
 
@@ -262,10 +295,6 @@ fn euclidean_move(current_position: &Position, next_position: &Position) -> Move
     let (x1, y1) = current_position;
     let (x2, y2) = next_position;
     (x2 - x1, y2 - y1)
-}
-
-pub fn part2(_contents: String) -> String {
-    "example2".to_string()
 }
 
 #[cfg(test)]
@@ -278,10 +307,11 @@ mod tests {
     fn test_part1() {
         assert_eq!(
             part1(fs::read_to_string("./input/21/real.txt").unwrap()),
-            "example"
+            "136780"
         );
     }
 
+    #[ignore = "not implemented"]
     #[test]
     fn test_part2() {
         assert_eq!(
