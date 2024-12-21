@@ -73,10 +73,9 @@ fn expand_input(
 
     let mut current_position = start_door;
 
-    let mut s = String::new();
+    let mut supercount = 0;
 
     for next_key in seq {
-        // dbg!(next_key);
         // find door keypad move
 
         let (door_move, first_door_moves) = {
@@ -90,51 +89,72 @@ fn expand_input(
             (door_move, first_door_moves)
         };
 
-        // possible optimization: is robot always at A after finishing previous robots seq?
-
         {
             // Robot 1
             let keys_to_press1 =
                 find_robot_keys(robot_map, current_position, door_move, first_door_moves);
 
             // Middle robots
-            let mut expanded = keys_to_press1;
-            for i in 0..times_to_expand {
-                expanded = expand_keys(robot_map, start_robot, expanded);
-                dbg!(door_number, i);
-            }
+            let expanded = keys_to_press1;
+            let mut memoized = FxHashMap::default();
 
-            for k in expanded {
-                s.push(k);
-            }
+            let count = expand_keys(
+                robot_map,
+                start_robot,
+                &expanded,
+                &mut memoized,
+                times_to_expand,
+            );
+            supercount += count;
         }
     }
 
     let num: usize = door_number[0..3].parse().unwrap();
 
     // dbg!(num, s.len());
-    println!("{} {}", door_number, s);
-    num * s.len()
+    println!("{} {}", door_number, supercount);
+    num * supercount
 }
 
 fn expand_keys(
     robot_map: &FxHashMap<char, (isize, isize)>,
     start_robot: (isize, isize),
-    keys_to_press1: Vec<char>,
-) -> Vec<char> {
+    start_keys: &Vec<char>,
+    memoized: &mut FxHashMap<(Vec<char>, usize), usize>,
+    times_to_expand: usize,
+) -> usize {
+    if times_to_expand == 0 {
+        return start_keys.len();
+    }
+    if let Some(count) = memoized.get(&(start_keys.clone(), times_to_expand)) {
+        return *count;
+    }
+
     let mut current_robot1_position = start_robot;
-    let mut keys_to_press2 = vec![];
-    for next_robot_key1 in keys_to_press1 {
-        let (robot1_move, robot1_first_moves) =
-            robot_move(robot_map, &mut current_robot1_position, next_robot_key1);
-        keys_to_press2.extend(find_robot_keys(
+    let mut key_group = vec![];
+    for key in start_keys {
+        let (robot_move, robot_first_moves) =
+            robot_move(robot_map, &mut current_robot1_position, *key);
+        key_group.push(find_robot_keys(
             robot_map,
             current_robot1_position,
-            robot1_move,
-            robot1_first_moves,
+            robot_move,
+            robot_first_moves,
         ));
     }
-    keys_to_press2
+
+    let mut s = 0;
+    for key_group in key_group.iter() {
+        s += expand_keys(
+            robot_map,
+            start_robot,
+            key_group,
+            memoized,
+            times_to_expand - 1,
+        );
+    }
+    memoized.insert((start_keys.clone(), times_to_expand), s);
+    s
 }
 
 fn robot_move(
@@ -186,11 +206,12 @@ fn find_first_moves_robot(
         // avoid empty spot
         first_moves.push(MoveDirection::Horizontal);
     } else {
-        if robot_move.1 != 0 {
-            first_moves.push(MoveDirection::Vertical);
-        }
+        // why does order matter here? if vertical is selected first the result differs
         if robot_move.0 != 0 {
             first_moves.push(MoveDirection::Horizontal);
+        }
+        if robot_move.1 != 0 {
+            first_moves.push(MoveDirection::Vertical);
         }
     };
     first_moves
@@ -203,8 +224,6 @@ fn find_robot_keys(
     first_moves: Vec<MoveDirection>,
 ) -> Vec<char> {
     let next_key = start_key(robot_map, current_position, position_move, first_moves);
-    // let next_key = possible_start_keys[0];
-    // calculate key presses
     let single_keys = find_key_order(position_move, next_key);
 
     expand_single_keys(position_move, single_keys)
