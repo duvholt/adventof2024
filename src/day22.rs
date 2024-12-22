@@ -5,6 +5,8 @@
 // To mix a value into the secret number, calculate the bitwise XOR of the given value and the secret number. Then, the secret number becomes the result of that operation. (If the secret number is 42 and you were to mix 15 into the secret number, the secret number would become 37.)
 // To prune the secret number, calculate the value of the secret number modulo 16777216. Then, the secret number becomes the result of that operation. (If the secret number is 100000000 and you were to prune the secret number, the secret number would become 16113920.)
 
+use rustc_hash::{FxHashMap, FxHashSet};
+
 pub fn part1(contents: String) -> String {
     let initial_secrets: Vec<u64> = contents.lines().map(|l| l.parse().unwrap()).collect();
 
@@ -61,35 +63,21 @@ pub fn part2(contents: String) -> String {
         secret_changes.push(changes);
     }
 
-    let mut max_score = 0;
+    let mut seq_scores: FxHashMap<[i8; 4], u64> = FxHashMap::default();
 
-    let min = -9;
-    let max = 9;
-    for i1 in min..=max {
-        dbg!(i1);
-        for i2 in min..=max {
-            for i3 in min..=max {
-                for i4 in min..=max {
-                    let mut total_score: u64 = 0;
-                    for changes in secret_changes.iter() {
-                        for w in changes.windows(4) {
-                            if w[0].1 == i1 && w[1].1 == i2 && w[2].1 == i3 && w[3].1 == i4 {
-                                let monkey_score = w[3].0;
-                                total_score += monkey_score as u64;
-                                break;
-                            }
-                        }
-                    }
-                    if total_score > max_score {
-                        max_score = total_score;
-                        // dbg!(max_score, [i1, i2, i3, i4]);
-                    }
-                }
+    for changes in secret_changes.iter() {
+        let mut unique = FxHashSet::default();
+        for w in changes.windows(4) {
+            let seq = [w[0].1, w[1].1, w[2].1, w[3].1];
+            if unique.contains(&seq) {
+                continue;
             }
+            unique.insert(seq);
+            let score = w[3].0 as u64;
+            *seq_scores.entry(seq).or_default() += score;
         }
     }
-
-    max_score.to_string()
+    seq_scores.values().max().unwrap().to_string()
 }
 
 #[cfg(test)]
