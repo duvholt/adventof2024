@@ -1,6 +1,9 @@
+use std::collections::VecDeque;
+
 use rustc_hash::FxHashMap;
 
 #[derive(Debug)]
+#[allow(clippy::upper_case_acronyms)]
 enum Gate {
     AND,
     OR,
@@ -8,8 +11,29 @@ enum Gate {
 }
 
 pub fn part1(contents: String) -> String {
+    let (mut input, gates) = parse(&contents);
+
+    let output = simulate_gates(&mut input, gates);
+
+    calculate_output(output, "z").to_string()
+}
+
+pub fn part2(contents: String) -> String {
+    let (mut input, gates) = parse(&contents);
+
+    let output = simulate_gates(&mut input, gates);
+    let x = calculate_output(output, "x");
+    let y = calculate_output(output, "y");
+    let z = calculate_output(output, "z");
+
+    dbg!(x, y, z);
+
+    todo!()
+}
+
+fn parse(contents: &str) -> (FxHashMap<&str, u8>, VecDeque<(&str, Gate, &str, &str)>) {
     let mut parts = contents.split("\n\n");
-    let mut input: FxHashMap<&str, u8> = parts
+    let input: FxHashMap<&str, u8> = parts
         .next()
         .unwrap()
         .lines()
@@ -22,7 +46,7 @@ pub fn part1(contents: String) -> String {
         })
         .collect();
 
-    let mut gates: Vec<(&str, Gate, &str, &str)> = parts
+    let gates: VecDeque<(&str, Gate, &str, &str)> = parts
         .next()
         .unwrap()
         .lines()
@@ -42,10 +66,14 @@ pub fn part1(contents: String) -> String {
             (input1, gate_type, input2, output)
         })
         .collect();
+    (input, gates)
+}
 
-    dbg!(&input);
-
-    while let Some(gate) = gates.pop() {
+fn simulate_gates<'a>(
+    input: &'a mut FxHashMap<&'a str, u8>,
+    mut gates: VecDeque<(&'a str, Gate, &'a str, &'a str)>,
+) -> &'a mut FxHashMap<&'a str, u8> {
+    while let Some(gate) = gates.pop_back() {
         let (input1, gate_type, input2, output) = &gate;
         if input.contains_key(input1) && input.contains_key(input2) {
             let value1 = input.get(*input1).unwrap();
@@ -57,12 +85,18 @@ pub fn part1(contents: String) -> String {
             };
             input.insert(output, output_value);
         } else {
-            // bad
-            gates.insert(0, gate);
+            gates.push_front(gate);
         }
     }
 
-    let mut output: Vec<_> = input.iter().filter(|(k, v)| k.starts_with("z")).collect();
+    input
+}
+
+fn calculate_output(input: &FxHashMap<&str, u8>, starts_with: &str) -> u64 {
+    let mut output: Vec<_> = input
+        .iter()
+        .filter(|(k, _v)| k.starts_with(starts_with))
+        .collect();
     output.sort_by_key(|v| v.0);
 
     let s: u64 = output
@@ -71,11 +105,7 @@ pub fn part1(contents: String) -> String {
         .map(|(i, v)| (*v.1 as u64) << i)
         .sum();
 
-    s.to_string()
-}
-
-pub fn part2(_contents: String) -> String {
-    "example2".to_string()
+    s
 }
 
 #[cfg(test)]
