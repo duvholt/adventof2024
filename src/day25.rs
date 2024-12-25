@@ -1,18 +1,17 @@
 pub fn part1(contents: String) -> String {
     let (height, keys, holes) = parse(contents);
 
-    let mut fit = Vec::new();
+    let fit: usize = keys
+        .iter()
+        .map(|key| {
+            holes
+                .iter()
+                .filter(|hole| (0..hole.len()).all(|x| key[x] + hole[x] < height))
+                .count()
+        })
+        .sum();
 
-    for key in keys.iter() {
-        for hole in holes.iter() {
-            let fits = (0..hole.len()).all(|x| key[x] + hole[x] < height);
-            if fits {
-                fit.push((key.clone(), hole.clone()));
-            }
-        }
-    }
-
-    fit.len().to_string()
+    fit.to_string()
 }
 
 fn parse(contents: String) -> (i32, Vec<Vec<i32>>, Vec<Vec<i32>>) {
