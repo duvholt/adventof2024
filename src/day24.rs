@@ -2,36 +2,44 @@ use std::collections::VecDeque;
 
 use rustc_hash::FxHashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(clippy::upper_case_acronyms)]
-enum Gate {
+enum GateType {
     AND,
     OR,
     XOR,
 }
 
+#[derive(Debug, Clone)]
+struct Gate<'a> {
+    input1: &'a str,
+    input2: &'a str,
+    gate_type: GateType,
+    output: &'a str,
+}
+
 pub fn part1(contents: String) -> String {
-    let (mut input, gates) = parse(&contents);
+    let (input, gates) = parse(&contents);
 
-    let output = simulate_gates(&mut input, gates);
+    let output = simulate_gates(input, gates);
 
-    calculate_output(output, "z").to_string()
+    calculate_output(&output, "z").to_string()
 }
 
 pub fn part2(contents: String) -> String {
-    let (mut input, gates) = parse(&contents);
+    let (input, gates) = parse(&contents);
 
-    let output = simulate_gates(&mut input, gates);
-    let x = calculate_output(output, "x");
-    let y = calculate_output(output, "y");
-    let z = calculate_output(output, "z");
+    let output = simulate_gates(input, gates);
+    let x = calculate_output(&output, "x");
+    let y = calculate_output(&output, "y");
+    let z = calculate_output(&output, "z");
 
     dbg!(x, y, z);
 
     todo!()
 }
 
-fn parse(contents: &str) -> (FxHashMap<&str, u8>, VecDeque<(&str, Gate, &str, &str)>) {
+fn parse(contents: &str) -> (FxHashMap<&str, u8>, Vec<Gate>) {
     let mut parts = contents.split("\n\n");
     let input: FxHashMap<&str, u8> = parts
         .next()
@@ -46,7 +54,7 @@ fn parse(contents: &str) -> (FxHashMap<&str, u8>, VecDeque<(&str, Gate, &str, &s
         })
         .collect();
 
-    let gates: VecDeque<(&str, Gate, &str, &str)> = parts
+    let gates: Vec<_> = parts
         .next()
         .unwrap()
         .lines()
@@ -55,38 +63,77 @@ fn parse(contents: &str) -> (FxHashMap<&str, u8>, VecDeque<(&str, Gate, &str, &s
             let input1 = gate_parts.next().unwrap();
             let gate_type = gate_parts.next().unwrap();
             let gate_type = match gate_type {
-                "OR" => Gate::OR,
-                "AND" => Gate::AND,
-                "XOR" => Gate::XOR,
+                "OR" => GateType::OR,
+                "AND" => GateType::AND,
+                "XOR" => GateType::XOR,
                 _ => unreachable!(),
             };
             let input2 = gate_parts.next().unwrap();
             gate_parts.next();
             let output = gate_parts.next().unwrap();
-            (input1, gate_type, input2, output)
+            Gate {
+                input1,
+                input2,
+                gate_type,
+                output,
+            }
         })
         .collect();
     (input, gates)
 }
 
-fn simulate_gates<'a>(
-    input: &'a mut FxHashMap<&'a str, u8>,
-    mut gates: VecDeque<(&'a str, Gate, &'a str, &'a str)>,
-) -> &'a mut FxHashMap<&'a str, u8> {
-    while let Some(gate) = gates.pop_back() {
-        let (input1, gate_type, input2, output) = &gate;
-        if input.contains_key(input1) && input.contains_key(input2) {
-            let value1 = input.get(*input1).unwrap();
-            let value2 = input.get(*input2).unwrap();
-            let output_value = match gate_type {
-                Gate::AND => value1 & value2,
-                Gate::OR => value1 | value2,
-                Gate::XOR => value1 ^ value2,
-            };
-            input.insert(output, output_value);
-        } else {
-            gates.push_front(gate);
+fn topological_sort<'a>(sources: &FxHashMap<&'a str, u8>, gates: Vec<Gate<'a>>) -> Vec<Gate<'a>> {
+    // Kahn’s algorithm
+    let mut fre: FxHashMap<_, usize> = FxHashMap::default();
+
+    let mut gate_edges: FxHashMap<_, Vec<_>> = FxHashMap::default();
+    let mut gate_map: FxHashMap<_, Gate<'a>> = FxHashMap::default();
+    for gate in gates {
+        let entry = fre.entry(gate.output).or_default();
+        *entry += 2;
+        gate_edges.entry(gate.input1).or_default().push(gate.output);
+        gate_edges.entry(gate.input2).or_default().push(gate.output);
+        gate_map.insert(gate.output, gate);
+    }
+
+    let mut queue: VecDeque<_> = sources.keys().collect();
+
+    let mut nodes = Vec::new();
+    while let Some(node) = queue.pop_front() {
+        if let Some(gate) = gate_map.remove(node) {
+            nodes.push(gate);
         }
+
+        let parts = gate_edges.get(node);
+        if parts.is_none() {
+            continue;
+        }
+
+        for p in parts.unwrap() {
+            let edges = fre.get_mut(p).unwrap();
+            *edges -= 1;
+            if *edges == 0 {
+                queue.push_back(p);
+            }
+        }
+    }
+    nodes
+}
+
+fn simulate_gates<'a>(
+    mut input: FxHashMap<&'a str, u8>,
+    gates: Vec<Gate<'a>>,
+) -> FxHashMap<&'a str, u8> {
+    let topological_gates = topological_sort(&input, gates);
+    for gate in topological_gates {
+        let value1 = input.get(gate.input1).unwrap();
+        let value2 = input.get(gate.input2).unwrap();
+        let output_value = match gate.gate_type {
+            GateType::AND => value1 & value2,
+            GateType::OR => value1 | value2,
+            GateType::XOR => value1 ^ value2,
+        };
+        input.insert(gate.output, output_value);
     }
 
     input
@@ -118,7 +165,7 @@ mod tests {
     fn test_part1() {
         assert_eq!(
             part1(fs::read_to_string("./input/24/real.txt").unwrap()),
-            "example"
+            "58740594706150"
         );
     }
 
