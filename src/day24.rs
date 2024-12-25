@@ -54,13 +54,11 @@ pub fn part2(contents: String) -> String {
             0 => valid_output_gate0(&output_gate),
             1 => valid_output_gate1(&output_gate, &gate_map),
             i if i == output_count - 1 => {
-                // todo (but not really necessary)
-                None
+                valid_output_gate_last(&output_gate, &gate_map, i, &prev_input_map)
             }
             i => valid_output_gate(&output_gate, &gate_map, i, &prev_input_map),
         };
         if let Some(invalid_output) = invalid_output {
-            dbg!(output_gate, invalid_output);
             wrong.push(invalid_output.0);
         }
     }
@@ -123,7 +121,6 @@ fn valid_output_gate<'a>(
     }
 
     let gate_output = format!("{:0>2}", gate_index);
-    let prev_gate_output = format!("{:0>2}", gate_index - 1);
 
     let (left_gate, right_gate) =
         match match_gates(output_gate, GateType::XOR, GateType::OR, gate_map) {
@@ -163,28 +160,51 @@ fn valid_output_gate<'a>(
         return Some((left_gate.output, "right gate wrong values"));
     }
 
-    let (left_gate2, right_gate2) =
-        match match_gates(right_gate, GateType::AND, GateType::AND, gate_map) {
-            Ok(value) => value,
-            Err(value) => return value,
-        };
+    check_carry(gate_map, prev_input_map, gate_index, right_gate)
+}
+
+fn check_carry<'a>(
+    gate_map: &'a std::collections::HashMap<&str, Gate<'a>, rustc_hash::FxBuildHasher>,
+    prev_input_map: &std::collections::HashMap<(&str, &str), usize, rustc_hash::FxBuildHasher>,
+    gate_index: usize,
+    gate: &'_ Gate<'a>,
+) -> Option<(&'a str, &'static str)> {
+    let prev_gate_output = format!("{:0>2}", gate_index - 1);
+
+    let (left_gate, right_gate) = match match_gates(gate, GateType::AND, GateType::AND, gate_map) {
+        Ok(value) => value,
+        Err(value) => return value,
+    };
 
     let prev_x = format!("x{}", prev_gate_output);
     let prev_y = format!("y{}", prev_gate_output);
 
-    if valid_gate_values(left_gate2, &prev_x, &prev_y) {
-        if prev_input_map.contains_key(&(right_gate2.input1, right_gate2.input2)) {
+    if valid_gate_values(left_gate, &prev_x, &prev_y) {
+        if prev_input_map.contains_key(&(right_gate.input1, right_gate.input2)) {
             return None;
         }
-        return Some((right_gate2.output, "right gate 2 wrong values"));
-    } else if valid_gate_values(right_gate2, &prev_x, &prev_y) {
-        if prev_input_map.contains_key(&(left_gate2.input1, left_gate2.input2)) {
+        return Some((right_gate.output, "right gate carry wrong values"));
+    } else if valid_gate_values(right_gate, &prev_x, &prev_y) {
+        if prev_input_map.contains_key(&(left_gate.input1, left_gate.input2)) {
             return None;
         }
-        return Some((right_gate2.output, "left gate 2 wrong values"));
+        return Some((right_gate.output, "left gate carry wrong values"));
     }
 
-    Some((left_gate2.output, "wrong 2 values"))
+    Some((left_gate.output, "wrong carry values"))
+}
+
+fn valid_output_gate_last<'a>(
+    output_gate: &Gate<'a>,
+    gate_map: &'a FxHashMap<&'a str, Gate<'a>>,
+    gate_index: usize,
+    prev_input_map: &FxHashMap<(&str, &str), usize>,
+) -> Option<(&'a str, &'static str)> {
+    if output_gate.gate_type != GateType::OR {
+        return Some((output_gate.output, "gate type"));
+    }
+
+    check_carry(gate_map, prev_input_map, gate_index, output_gate)
 }
 
 fn match_gates<'a>(
