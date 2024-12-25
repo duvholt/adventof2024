@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use rustc_hash::FxHashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 #[allow(clippy::upper_case_acronyms)]
 enum GateType {
     AND,
@@ -27,13 +27,221 @@ pub fn part1(contents: String) -> String {
 }
 
 pub fn part2(contents: String) -> String {
-    let (input, gates) = parse(&contents);
+    let (_input, gates) = parse(&contents);
 
-    let _output = simulate_gates(input, gates);
+    let mut output_gates: Vec<_> = gates
+        .iter()
+        .filter(|g| g.output.starts_with("z"))
+        .cloned()
+        .collect();
+    output_gates.sort_by_key(|g| g.output);
 
-    // Solve using artisanally handcrafted pen and paper methods
+    let output_count = output_gates.len();
 
-    "cvh,dbb,hbk,kvn,tfn,z14,z18,z23".to_string()
+    let mut gate_map: FxHashMap<_, _> = FxHashMap::default();
+    for gate in gates {
+        gate_map.insert(gate.output, gate);
+    }
+
+    let mut prev_input_map = FxHashMap::<(&str, &str), usize>::default();
+
+    let mut wrong = Vec::new();
+
+    for (i, output_gate) in output_gates.into_iter().enumerate() {
+        prev_input_map.insert((output_gate.input1, output_gate.input2), i);
+        prev_input_map.insert((output_gate.input2, output_gate.input1), i);
+        let invalid_output = match i {
+            0 => valid_output_gate0(&output_gate),
+            1 => valid_output_gate1(&output_gate, &gate_map),
+            i if i == output_count - 1 => {
+                // todo (but not really necessary)
+                None
+            }
+            i => valid_output_gate(&output_gate, &gate_map, i, &prev_input_map),
+        };
+        if let Some(invalid_output) = invalid_output {
+            dbg!(output_gate, invalid_output);
+            wrong.push(invalid_output.0);
+        }
+    }
+    wrong.sort();
+
+    wrong.join(",")
+}
+
+fn valid_output_gate0<'a>(output_gate: &Gate<'a>) -> Option<(&'a str, &'static str)> {
+    let valid_gate_type = output_gate.gate_type == GateType::XOR;
+    let valid_gates = valid_gate_values(output_gate, "x00", "y00");
+    if !valid_gate_type || !valid_gates {
+        return Some((output_gate.output, "wrong values"));
+    }
+    None
+}
+
+fn valid_gate_values(output_gate: &Gate<'_>, value1: &str, value2: &str) -> bool {
+    (output_gate.input1 == value1 && output_gate.input2 == value2)
+        || (output_gate.input1 == value2 && output_gate.input2 == value1)
+}
+
+fn valid_output_gate1<'a>(
+    output_gate: &Gate<'a>,
+    gate_map: &'a FxHashMap<&'a str, Gate<'a>>,
+) -> Option<(&'a str, &'static str)> {
+    if output_gate.gate_type != GateType::XOR {
+        return Some((output_gate.output, "gate type"));
+    }
+
+    let (left_gate, right_gate) =
+        match match_gates(output_gate, GateType::AND, GateType::XOR, gate_map) {
+            Ok(value) => value,
+            Err(value) => return value,
+        };
+    if valid_gate_values(left_gate, "x00", "y00") {
+        if valid_gate_values(right_gate, "x01", "y01") {
+            return None;
+        }
+        return Some((right_gate.output, "right gate wrong values"));
+    }
+    if valid_gate_values(right_gate, "x00", "y00") {
+        if valid_gate_values(left_gate, "x01", "y01") {
+            return None;
+        }
+        return Some((left_gate.output, "left gate wrong values"));
+    }
+
+    Some((left_gate.output, "wrong values"))
+}
+
+fn valid_output_gate<'a>(
+    output_gate: &Gate<'a>,
+    gate_map: &'a FxHashMap<&'a str, Gate<'a>>,
+    gate_index: usize,
+    prev_input_map: &FxHashMap<(&str, &str), usize>,
+) -> Option<(&'a str, &'static str)> {
+    if output_gate.gate_type != GateType::XOR {
+        return Some((output_gate.output, "gate type"));
+    }
+
+    let gate_output = format!("{:0>2}", gate_index);
+    let prev_gate_output = format!("{:0>2}", gate_index - 1);
+
+    let (left_gate, right_gate) =
+        match match_gates(output_gate, GateType::XOR, GateType::OR, gate_map) {
+            Ok(value) => value,
+            Err(_value) => {
+                // check if one input is correct
+                let left = gate_map.get(output_gate.input1).unwrap();
+                let right = gate_map.get(output_gate.input2).unwrap();
+                if left.gate_type == GateType::XOR
+                    && valid_gate_values(
+                        left,
+                        &format!("x{}", gate_output),
+                        &format!("y{}", gate_output),
+                    )
+                {
+                    return Some((output_gate.input2, "left was correct"));
+                } else if right.gate_type == GateType::XOR
+                    && valid_gate_values(
+                        right,
+                        &format!("x{}", gate_output),
+                        &format!("y{}", gate_output),
+                    )
+                {
+                    return Some((output_gate.input1, "right was correct"));
+                }
+                return Some((output_gate.input2, "both were wrong"));
+            }
+        };
+    // left: XOR sum
+    // right: OR carry
+
+    if !valid_gate_values(
+        left_gate,
+        &format!("x{}", gate_output),
+        &format!("y{}", gate_output),
+    ) {
+        return Some((left_gate.output, "right gate wrong values"));
+    }
+
+    let (left_gate2, right_gate2) =
+        match match_gates(right_gate, GateType::AND, GateType::AND, gate_map) {
+            Ok(value) => value,
+            Err(value) => return value,
+        };
+
+    let prev_x = format!("x{}", prev_gate_output);
+    let prev_y = format!("y{}", prev_gate_output);
+
+    if valid_gate_values(left_gate2, &prev_x, &prev_y) {
+        if prev_input_map.contains_key(&(right_gate2.input1, right_gate2.input2)) {
+            return None;
+        }
+        return Some((right_gate2.output, "right gate 2 wrong values"));
+    } else if valid_gate_values(right_gate2, &prev_x, &prev_y) {
+        if prev_input_map.contains_key(&(left_gate2.input1, left_gate2.input2)) {
+            return None;
+        }
+        return Some((right_gate2.output, "left gate 2 wrong values"));
+    }
+
+    Some((left_gate2.output, "wrong 2 values"))
+}
+
+fn match_gates<'a>(
+    output_gate: &Gate<'a>,
+    gate1_type: GateType,
+    gate2_type: GateType,
+    gate_map: &'a std::collections::HashMap<&'a str, Gate<'a>, rustc_hash::FxBuildHasher>,
+) -> Result<(&'a Gate<'a>, &'a Gate<'a>), Option<(&'a str, &'static str)>> {
+    Ok(
+        match get_gate_with_type(output_gate.input1, gate1_type, gate_map) {
+            Ok(value) => {
+                let left_gate = match get_gate_with_type(output_gate.input2, gate2_type, gate_map) {
+                    Ok(value) => value,
+                    Err(value) => return Err(value),
+                };
+                (value, left_gate)
+            }
+            Err(_) => match get_gate_with_type(output_gate.input2, gate1_type, gate_map) {
+                Ok(value) => {
+                    let left_gate =
+                        match get_gate_with_type(output_gate.input1, gate2_type, gate_map) {
+                            Ok(value) => value,
+                            Err(value) => return Err(value),
+                        };
+                    (value, left_gate)
+                }
+                Err(_) => {
+                    match get_gate_with_type(output_gate.input2, gate2_type, gate_map) {
+                        Ok(_) => {
+                            return Err(Some((output_gate.input1, "input 2 has correct type")))
+                        }
+                        Err(_value) => {
+                            return Err(Some((output_gate.input2, "both have wrong type")))
+                        }
+                    };
+                }
+            },
+        },
+    )
+}
+
+fn get_gate_with_type<'a>(
+    output: &'a str,
+    gate_type: GateType,
+    gate_map: &'a FxHashMap<&str, Gate<'a>>,
+) -> Result<&'a Gate<'a>, Option<(&'a str, &'static str)>> {
+    Ok(match gate_map.get(output) {
+        Some(g) => {
+            if g.gate_type != gate_type {
+                return Err(Some((output, "gate type")));
+            }
+            g
+        }
+        None => {
+            return Err(Some((output, "gate not found")));
+        }
+    })
 }
 
 fn parse(contents: &str) -> (FxHashMap<&str, u8>, Vec<Gate>) {
