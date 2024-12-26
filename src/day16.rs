@@ -1,5 +1,5 @@
 use std::{
-    collections::{hash_map::Entry, BinaryHeap, HashSet},
+    collections::{BinaryHeap, HashSet},
     hash::Hash,
 };
 
@@ -53,36 +53,19 @@ fn find_path(
     let mut expanded = HashSet::new();
 
     while let Some(node) = frontier.pop() {
-        let Node(position, _, _path, _) = node.clone();
-        if position == end {
+        if expanded.contains(&(node.0, node.1)) {
+            continue;
+        }
+        if node.0 == end {
             // won
             return node;
         }
-        let neighbours = neighbourhood(&map_grid, &node);
-        let mut hash_frontier: FxHashMap<_, _> = frontier
-            .into_iter()
-            .map(|f| ((f.0, f.1), (f.2, f.3)))
-            .collect();
+        let neighbours = neighbourhood(map_grid, &node);
         for neighbour in neighbours {
             if !expanded.contains(&(neighbour.0, neighbour.1)) {
-                let entry = hash_frontier.entry((neighbour.0, neighbour.1));
-                match entry {
-                    Entry::Occupied(mut entry) => {
-                        let val = entry.get_mut();
-                        if val.1 > neighbour.3 {
-                            *val = (neighbour.2, neighbour.3);
-                        }
-                    }
-                    Entry::Vacant(entry) => {
-                        entry.insert((neighbour.2, neighbour.3));
-                    }
-                }
+                frontier.push(neighbour);
             }
         }
-        frontier = hash_frontier
-            .into_iter()
-            .map(|(k, v)| Node(k.0, k.1, v.0, v.1))
-            .collect();
         expanded.insert((node.0, node.1));
         // print_map(&map_grid, position, direction);
     }
