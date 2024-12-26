@@ -82,21 +82,27 @@ pub fn part2(contents: String) -> String {
 }
 
 fn has_line(robots: &[Robot], width: i64, height: i64, min_length: i32) -> bool {
-    let positions: rustc_hash::FxHashSet<_> = robots.iter().map(|r| r.position).collect();
+    let mut y_robots: Vec<Vec<_>> = vec![vec![]; height as usize];
+    for robot in robots {
+        y_robots[robot.position.1 as usize].push(robot.position.0);
+    }
     for y in 0..height {
+        y_robots[y as usize].sort();
+        let robot_line = &y_robots[y as usize];
+        if robot_line.len() < (min_length as usize) {
+            continue;
+        }
         let mut continous = 0;
-        for x in 0..width {
-            if positions.contains(&(x, y)) {
+        for w in robot_line.windows(2) {
+            if w[0] == w[1] - 1 {
                 continous += 1;
             } else {
-                if continous > min_length {
-                    return true;
-                }
                 continous = 0;
             }
-        }
-        if continous > min_length {
-            return true;
+
+            if continous > min_length {
+                return true;
+            }
         }
     }
     false
