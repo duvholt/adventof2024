@@ -116,9 +116,12 @@ fn find_all_paths(
 
     let mut path_map = FxHashMap::default();
     let mut best_path = FxHashSet::default();
+    best_path.extend(goals.iter().cloned().map(|g| g.0));
 
     while let Some(node) = frontier.pop() {
-        if let Some(cost) = expanded.get(&node.0) {
+        let visited_node = expanded.get(&node.0);
+        let already_visited = visited_node.is_some();
+        if let Some(cost) = visited_node {
             if *cost < node.2 {
                 continue;
             }
@@ -127,14 +130,17 @@ fn find_all_paths(
             path_map.insert(node.0, prev);
         }
 
-        if goals.contains(&(node.0 .0, node.2)) {
-            for p in traverse_path(&path_map, &node) {
-                best_path.insert(p.0);
+        if already_visited {
+            if goals.contains(&(node.0 .0, node.2)) {
+                best_path.extend(traverse_path(&path_map, &node).into_iter().map(|p| p.0));
             }
+            continue;
         }
         let neighbours = neighbourhood(&map_grid, &node);
         for neighbour in neighbours {
-            frontier.push(neighbour);
+            if !expanded.contains_key(&neighbour.0) {
+                frontier.push(neighbour);
+            }
         }
         expanded.insert(node.0, node.2);
     }
