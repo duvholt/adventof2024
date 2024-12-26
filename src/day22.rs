@@ -32,15 +32,15 @@ pub fn part1(contents: String) -> String {
 }
 
 pub fn part2(contents: String) -> String {
-    let initial_secrets: Vec<u64> = contents.lines().map(|l| l.parse().unwrap()).collect();
+    let initial_secrets: Vec<u32> = contents.lines().map(|l| l.parse().unwrap()).collect();
 
-    let mut secret_changes = Vec::new();
+    let mut secret_changes = Vec::with_capacity(initial_secrets.len());
 
     for initial in initial_secrets {
         let mut secret = initial;
         let mut prev_digit: i8 = (secret % 10).try_into().unwrap();
 
-        let mut changes = Vec::new();
+        let mut changes = Vec::with_capacity(2000);
 
         for _i in 0..2000 {
             let mult = secret * 64;
@@ -65,8 +65,8 @@ pub fn part2(contents: String) -> String {
 
     let mut seq_scores: FxHashMap<[i8; 4], u64> = FxHashMap::default();
 
-    for changes in secret_changes.iter() {
-        let mut unique = FxHashSet::default();
+    let mut unique = FxHashSet::default();
+    for changes in secret_changes.into_iter() {
         for w in changes.windows(4) {
             let seq = [w[0].1, w[1].1, w[2].1, w[3].1];
             if unique.contains(&seq) {
@@ -76,6 +76,7 @@ pub fn part2(contents: String) -> String {
             let score = w[3].0 as u64;
             *seq_scores.entry(seq).or_default() += score;
         }
+        unique.clear();
     }
     seq_scores.values().max().unwrap().to_string()
 }
