@@ -72,7 +72,7 @@ pub fn part2(contents: String) -> String {
         second += 1;
         move_robots(&mut robots, width, height, 1);
 
-        let has_christmas_tree_line = has_line(&robots, width, height, 10);
+        let has_christmas_tree_line = has_line(&robots, height, 10);
         if has_christmas_tree_line {
             // print_map(second, &robots, width, height);
             break;
@@ -81,7 +81,7 @@ pub fn part2(contents: String) -> String {
     second.to_string()
 }
 
-fn has_line(robots: &[Robot], width: i64, height: i64, min_length: i32) -> bool {
+fn has_line(robots: &[Robot], height: i64, min_length: i32) -> bool {
     let mut y_robots: Vec<Vec<_>> = vec![vec![]; height as usize];
     for robot in robots {
         y_robots[robot.position.1 as usize].push(robot.position.0);

@@ -44,14 +44,25 @@ pub fn part2(contents: String) -> String {
 
     let map_grid = parse(contents);
 
-    // bruteforce ftw
+    let mut map_grid_hash: FxHashSet<Position> = map_grid.iter().cloned().take(bytes).collect();
     loop {
-        let map_grid_hash: FxHashSet<Position> = map_grid.iter().cloned().take(bytes).collect();
-        if find_path(start, end, &map_grid_hash).is_none() {
-            let p = map_grid[bytes - 1];
-            return format!("{},{}", p.0, p.1);
+        match find_path(start, end, &map_grid_hash) {
+            None => {
+                let p = map_grid[bytes - 1];
+                return format!("{},{}", p.0, p.1);
+            }
+            Some(path) => {
+                let mut next_byte = map_grid[bytes];
+                map_grid_hash.insert(next_byte);
+                bytes += 1;
+                // skip until byte is blocking path
+                while !path.contains(&next_byte) {
+                    next_byte = map_grid[bytes];
+                    map_grid_hash.insert(next_byte);
+                    bytes += 1;
+                }
+            }
         }
-        bytes += 1;
     }
 }
 
