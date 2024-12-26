@@ -72,7 +72,7 @@ pub fn part2(contents: String) -> String {
         second += 1;
         move_robots(&mut robots, width, height, 1);
 
-        let has_christmas_tree_line = has_line(&robots, height, 10);
+        let has_christmas_tree_line = has_line(&robots, width as usize, height as usize, 10);
         if has_christmas_tree_line {
             // print_map(second, &robots, width, height);
             break;
@@ -81,28 +81,22 @@ pub fn part2(contents: String) -> String {
     second.to_string()
 }
 
-fn has_line(robots: &[Robot], height: i64, min_length: i32) -> bool {
-    let mut y_robots: Vec<Vec<_>> = vec![vec![]; height as usize];
+fn has_line(robots: &[Robot], width: usize, height: usize, min_length: usize) -> bool {
+    let mut grid = vec![vec![false; width]; height];
     for robot in robots {
-        y_robots[robot.position.1 as usize].push(robot.position.0);
+        grid[robot.position.1 as usize][robot.position.0 as usize] = true;
     }
-    for y in 0..height {
-        y_robots[y as usize].sort();
-        let robot_line = &y_robots[y as usize];
-        if robot_line.len() < (min_length as usize) {
-            continue;
-        }
-        let mut continous = 0;
-        for w in robot_line.windows(2) {
-            if w[0] == w[1] - 1 {
-                continous += 1;
-            } else {
-                continous = 0;
-            }
 
-            if continous > min_length {
-                return true;
+    for line in grid {
+        let mut i = 0;
+        while i < (width - min_length) {
+            let w = &line[i..i + min_length];
+            if let Some((pos, _)) = w.iter().enumerate().rev().find(|w| !w.1) {
+                // skip to first robot after break in line
+                i += pos + 1;
+                continue;
             }
+            return true;
         }
     }
     false
