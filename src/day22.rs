@@ -32,7 +32,7 @@ pub fn part1(contents: String) -> String {
 }
 
 pub fn part2(contents: String) -> String {
-    let initial_secrets: Vec<u32> = contents.lines().map(|l| l.parse().unwrap()).collect();
+    let initial_secrets: Vec<u64> = contents.lines().map(|l| l.parse().unwrap()).collect();
 
     let mut secret_changes = Vec::with_capacity(initial_secrets.len());
 
